@@ -12,6 +12,26 @@ export default function Flashcards() {
   const [lesson, setLesson] = useState('all');
   const [loading, setLoading] = useState(true);
   const [frontLang, setFrontLang] = useState('vietnamese');
+  const [completions, setCompletions] = useState([]);
+  const [userId, setUserId] = useState(null);
+  const [marking, setMarking] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
+  }, []);
+
+  const loadCompletions = useCallback(async (uid) => {
+    if (!uid) return;
+    const { data } = await supabase.from('lesson_completions').select('*').eq('user_id', uid).eq('type', 'flashcards');
+    setCompletions(data || []);
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id);
+      loadCompletions(data.user?.id);
+    });
+  }, [loadCompletions]);
 
   const loadCards = useCallback(async () => {
     setLoading(true);
@@ -32,8 +52,24 @@ export default function Flashcards() {
   function prev() { setFlipped(false); setTimeout(() => setIndex(i => Math.max(i - 1, 0)), 100); }
   function toggleLang(lang) { setFrontLang(lang); setFlipped(false); }
 
+  function isCompleted(lvl, ls) {
+    return completions.some(c => c.level === lvl && c.lesson === ls);
+  }
+
+  async function markDone() {
+    if (!userId || level === 'all' || lesson === 'all') return;
+    setMarking(true);
+    await supabase.from('lesson_completions').upsert({
+      user_id: userId, level, lesson, type: 'flashcards'
+    }, { onConflict: 'user_id,level,lesson,type' });
+    await loadCompletions(userId);
+    setMarking(false);
+  }
+
   const card = cards[index];
   const showVietnamese = frontLang === 'vietnamese';
+  const isLastCard = index === cards.length - 1;
+  const currentlyDone = level !== 'all' && lesson !== 'all' && isCompleted(level, lesson);
 
   return (
     <div>
@@ -65,11 +101,20 @@ export default function Flashcards() {
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Lesson</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {LESSONS.map(ls => (
-            <button key={ls} className={`level-tab ${lesson === ls ? 'active' : ''}`} onClick={() => setLesson(ls)} style={{ fontSize: 12, padding: '4px 10px', minWidth: 40 }}>
-              {ls === 'all' ? 'All' : ls}
-            </button>
-          ))}
+          {LESSONS.map(ls => {
+            const done = ls !== 'all' && level !== 'all' && isCompleted(level, ls);
+            return (
+              <button key={ls} onClick={() => setLesson(ls)} style={{
+                fontSize: 12, padding: '4px 10px', minWidth: 40,
+                borderRadius: 20, border: `2px solid ${lesson === ls ? (done ? 'var(--success)' : 'var(--red)') : done ? 'var(--success)' : '#E8E8F0'}`,
+                background: lesson === ls ? (done ? 'var(--success)' : 'var(--red)') : done ? '#E8F8EF' : 'var(--white)',
+                color: lesson === ls ? 'white' : done ? 'var(--success)' : 'var(--text)',
+                fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+              }}>
+                {ls === 'all' ? 'All' : ls} {done ? '✓' : ''}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -94,14 +139,30 @@ export default function Flashcards() {
                 </div>
               </div>
             </div>
+
             <div className="flashcard-controls">
               <button className="btn btn-secondary" onClick={prev} disabled={index === 0}>← Prev</button>
               <button className="btn btn-secondary" onClick={() => setFlipped(!flipped)}>Flip</button>
-              <button className="btn btn-primary" onClick={next} disabled={index === cards.length - 1}>Next →</button>
+              <button className="btn btn-primary" onClick={next} disabled={isLastCard}>Next →</button>
             </div>
-            <div style={{ textAlign: 'center', marginTop: 20 }}>
-              <button className="btn btn-secondary btn-sm" onClick={loadCards}>🔀 Shuffle</button>
+
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <button className="btn btn-secondary btn-sm" onClick={loadCards} style={{ marginRight: 8 }}>🔀 Shuffle</button>
             </div>
+
+            {isLastCard && level !== 'all' && lesson !== 'all' && (
+              <div style={{ textAlign: 'center', marginTop: 16 }}>
+                {currentlyDone ? (
+                  <div style={{ background: '#E8F8EF', borderRadius: 12, padding: '12px 20px', color: 'var(--success)', fontWeight: 600 }}>
+                    ✓ Lesson {lesson} flashcards completed!
+                  </div>
+                ) : (
+                  <button className="btn btn-gold btn-full" onClick={markDone} disabled={marking}>
+                    {marking ? 'Saving...' : '🎉 Mark Lesson as Done'}
+                  </button>
+                )}
+              </div>
+            )}
           </>
         )}
     </div>
