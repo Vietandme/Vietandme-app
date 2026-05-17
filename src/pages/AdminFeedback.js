@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function AdminFeedback() {
@@ -8,9 +8,7 @@ export default function AdminFeedback() {
   const [saving, setSaving] = useState({});
   const [message, setMessage] = useState('');
 
-  useEffect(() => { load(); }, [filter]);
-
-  async function load() {
+  const load = useCallback(async () => {
     let query = supabase
       .from('recordings')
       .select('*, profiles(full_name, email, level)')
@@ -18,7 +16,9 @@ export default function AdminFeedback() {
     if (filter !== 'all') query = query.eq('status', filter);
     const { data } = await query;
     setRecordings(data || []);
-  }
+  }, [filter]);
+
+  useEffect(() => { load(); }, [load]);
 
   function handleFeedbackChange(id, val) {
     setFeedbackText(prev => ({ ...prev, [id]: val }));

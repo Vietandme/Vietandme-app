@@ -24,8 +24,6 @@ export default function Progress({ profile }) {
     ? Math.round(quizResults.reduce((a, r) => a + (r.score / r.total) * 100, 0) / quizResults.length)
     : 0;
 
-  const reviewed = recordings.filter(r => r.status === 'reviewed').length;
-
   if (loading) return <p style={{ color: 'var(--muted)', textAlign: 'center', marginTop: 40 }}>Loading...</p>;
 
   return (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function Quiz() {
@@ -15,9 +15,7 @@ export default function Quiz() {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
   }, []);
 
-  useEffect(() => { loadQuiz(); }, [level]);
-
-  async function loadQuiz() {
+  const loadQuiz = useCallback(async () => {
     setLoading(true);
     let query = supabase.from('quiz_questions').select('*');
     if (level !== 'all') query = query.eq('level', level);
@@ -26,7 +24,9 @@ export default function Quiz() {
     setQuestions(shuffled);
     setIndex(0); setSelected(null); setScore(0); setDone(false);
     setLoading(false);
-  }
+  }, [level]);
+
+  useEffect(() => { loadQuiz(); }, [loadQuiz]);
 
   function handleSelect(option) {
     if (selected) return;

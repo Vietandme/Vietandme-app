@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function Flashcards() {
@@ -8,11 +8,7 @@ export default function Flashcards() {
   const [level, setLevel] = useState('all');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadCards();
-  }, [level]);
-
-  async function loadCards() {
+  const loadCards = useCallback(async () => {
     setLoading(true);
     let query = supabase.from('flashcards').select('*');
     if (level !== 'all') query = query.eq('level', level);
@@ -21,7 +17,9 @@ export default function Flashcards() {
     setIndex(0);
     setFlipped(false);
     setLoading(false);
-  }
+  }, [level]);
+
+  useEffect(() => { loadCards(); }, [loadCards]);
 
   function shuffle(arr) {
     return [...arr].sort(() => Math.random() - 0.5);
