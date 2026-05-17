@@ -14,11 +14,10 @@ export default function AdminContent() {
   const [search, setSearch] = useState('');
   const [filterLevel, setFilterLevel] = useState('all');
   const [filterLesson, setFilterLesson] = useState('all');
-  const [deleting, setDeleting] = useState(null);
 
   const loadCards = useCallback(async () => {
     setLoading(true);
-    let query = supabase.from('flashcards').select('*').order('level').order('lesson').order('vietnamese');
+    let query = supabase.from('flashcards').select('*').order('vietnamese');
     if (filterLevel !== 'all') query = query.eq('level', filterLevel);
     if (filterLesson !== 'all') query = query.eq('lesson', filterLesson);
     const { data } = await query;
@@ -30,7 +29,15 @@ export default function AdminContent() {
 
   function startEdit(card) {
     setEditingId(card.id);
-    setEditForm({ ...card });
+    setEditForm({
+      vietnamese: card.vietnamese || '',
+      english: card.english || '',
+      pronunciation: card.pronunciation || '',
+      example: card.example || '',
+      level: card.level || 'beginner',
+      lesson: card.lesson || '',
+      category: card.category || '',
+    });
   }
 
   function cancelEdit() {
@@ -46,10 +53,12 @@ export default function AdminContent() {
       pronunciation: editForm.pronunciation,
       example: editForm.example,
       level: editForm.level,
-      lesson: editForm.lesson,
+      lesson: editForm.lesson || null,
       category: editForm.category,
     }).eq('id', editingId);
-    if (!error) {
+    if (error) {
+      alert('Save failed: ' + error.message);
+    } else {
       setMessage('Card updated!');
       setTimeout(() => setMessage(''), 2000);
       setEditingId(null);
@@ -60,9 +69,7 @@ export default function AdminContent() {
 
   async function deleteCard(id) {
     if (!window.confirm('Delete this flashcard?')) return;
-    setDeleting(id);
     await supabase.from('flashcards').delete().eq('id', id);
-    setDeleting(null);
     loadCards();
   }
 
@@ -78,29 +85,16 @@ export default function AdminContent() {
 
       {message && <div className="alert alert-success">{message}</div>}
 
-      {/* Search and filters */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="form-group" style={{ marginBottom: 12 }}>
-          <input
-            placeholder="🔍 Search Vietnamese or English..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+          <input placeholder="🔍 Search Vietnamese or English..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <select
-            value={filterLevel}
-            onChange={e => setFilterLevel(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: 8, border: '2px solid #E8E8F0', fontFamily: 'DM Sans, sans-serif', fontSize: 13, background: 'var(--cream)' }}
-          >
+          <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '2px solid #E8E8F0', fontFamily: 'DM Sans, sans-serif', fontSize: 13, background: 'var(--cream)' }}>
             <option value="all">All Levels</option>
             {LEVELS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
           </select>
-          <select
-            value={filterLesson}
-            onChange={e => setFilterLesson(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: 8, border: '2px solid #E8E8F0', fontFamily: 'DM Sans, sans-serif', fontSize: 13, background: 'var(--cream)' }}
-          >
+          <select value={filterLesson} onChange={e => setFilterLesson(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '2px solid #E8E8F0', fontFamily: 'DM Sans, sans-serif', fontSize: 13, background: 'var(--cream)' }}>
             <option value="all">All Lessons</option>
             {LESSONS.map(l => <option key={l} value={l}>Lesson {l}</option>)}
           </select>
@@ -113,34 +107,33 @@ export default function AdminContent() {
         ) : filtered.map(card => (
           <div key={card.id} className="card" style={{ marginBottom: 12 }}>
             {editingId === card.id ? (
-              /* Edit mode */
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label>Vietnamese</label>
-                    <input value={editForm.vietnamese || ''} onChange={e => setEditForm({ ...editForm, vietnamese: e.target.value })} />
+                    <input value={editForm.vietnamese} onChange={e => setEditForm({ ...editForm, vietnamese: e.target.value })} />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label>English</label>
-                    <input value={editForm.english || ''} onChange={e => setEditForm({ ...editForm, english: e.target.value })} />
+                    <input value={editForm.english} onChange={e => setEditForm({ ...editForm, english: e.target.value })} />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label>Pronunciation</label>
-                    <input value={editForm.pronunciation || ''} onChange={e => setEditForm({ ...editForm, pronunciation: e.target.value })} />
+                    <input value={editForm.pronunciation} onChange={e => setEditForm({ ...editForm, pronunciation: e.target.value })} />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label>Category</label>
-                    <input value={editForm.category || ''} onChange={e => setEditForm({ ...editForm, category: e.target.value })} />
+                    <input value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })} />
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label>Level</label>
-                    <select value={editForm.level || 'beginner'} onChange={e => setEditForm({ ...editForm, level: e.target.value })}>
+                    <select value={editForm.level} onChange={e => setEditForm({ ...editForm, level: e.target.value })}>
                       {LEVELS.map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
                     </select>
                   </div>
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label>Lesson</label>
-                    <select value={editForm.lesson || ''} onChange={e => setEditForm({ ...editForm, lesson: e.target.value })}>
+                    <select value={editForm.lesson} onChange={e => setEditForm({ ...editForm, lesson: e.target.value })}>
                       <option value="">No lesson</option>
                       {LESSONS.map(l => <option key={l} value={l}>Lesson {l}</option>)}
                     </select>
@@ -148,7 +141,7 @@ export default function AdminContent() {
                 </div>
                 <div className="form-group" style={{ marginBottom: 12 }}>
                   <label>Example sentence</label>
-                  <input value={editForm.example || ''} onChange={e => setEditForm({ ...editForm, example: e.target.value })} />
+                  <input value={editForm.example} onChange={e => setEditForm({ ...editForm, example: e.target.value })} />
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="btn btn-primary btn-sm" onClick={saveEdit} disabled={saving}>{saving ? 'Saving...' : '✓ Save'}</button>
@@ -156,7 +149,6 @@ export default function AdminContent() {
                 </div>
               </div>
             ) : (
-              /* View mode */
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
@@ -166,14 +158,14 @@ export default function AdminContent() {
                   <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 4 }}>{card.english}</div>
                   {card.example && <div style={{ fontSize: 12, color: 'var(--muted)', fontStyle: 'italic' }}>{card.example}</div>}
                   <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                    <span className={`level-badge level-${card.level?.replace('-', '') === 'preintermediate' ? 'intermediate' : card.level || 'beginner'}`} style={{ fontSize: 11 }}>{card.level}</span>
+                    <span style={{ fontSize: 11, background: '#FDEAEA', color: 'var(--red)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{card.level}</span>
                     {card.lesson && <span style={{ fontSize: 11, background: '#E8E8F0', padding: '2px 8px', borderRadius: 10, color: 'var(--muted)' }}>Lesson {card.lesson}</span>}
                     {card.category && <span style={{ fontSize: 11, background: '#E8E8F0', padding: '2px 8px', borderRadius: 10, color: 'var(--muted)' }}>{card.category}</span>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
-                  <button className="btn btn-secondary btn-sm" onClick={() => startEdit(card)}>✏️ Edit</button>
-                  <button className="btn btn-sm btn-danger" onClick={() => deleteCard(card.id)} disabled={deleting === card.id}>🗑️</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => startEdit(card)}>✏️</button>
+                  <button className="btn btn-sm btn-danger" onClick={() => deleteCard(card.id)}>🗑️</button>
                 </div>
               </div>
             )}
