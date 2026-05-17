@@ -37,7 +37,7 @@ export default function Flashcards() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 24, marginBottom: 16 }}>Flashcards 🃏</h1>
+      <h1 style={{ fontSize: 24, marginBottom: 16 }}>Flashcards 📇</h1>
 
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Show first</div>
@@ -75,7 +75,7 @@ export default function Flashcards() {
 
       {loading ? <p style={{ textAlign: 'center', color: 'var(--muted)' }}>Loading cards...</p>
         : cards.length === 0 ? (
-          <div className="empty-state"><div className="empty-icon">🃏</div><p>No flashcards yet for this selection.</p></div>
+          <div className="empty-state"><div className="empty-icon">📇</div><p>No flashcards yet for this selection.</p></div>
         ) : (
           <>
             <div className="flashcard-progress">{index + 1} / {cards.length}</div>

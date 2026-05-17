@@ -46,7 +46,7 @@ export default function StudentDashboard({ profile }) {
       <h2 style={{ fontSize: 18, marginBottom: 12, marginTop: 8 }}>What do you want to practice?</h2>
       <div className="menu-grid">
         <Link to="/flashcards" className="menu-card">
-          <span className="icon">🃏</span>
+          <span className="icon">📇</span>
           <span className="label">Flashcards</span>
           <span className="sub">Vocab & phrases</span>
         </Link>

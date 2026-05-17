@@ -80,7 +80,7 @@ export default function AdminContent() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Manage Flashcards 🃏</h1>
+      <h1 style={{ fontSize: 24, marginBottom: 8 }}>Manage Flashcards 📇</h1>
       <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 20 }}>{cards.length} cards in database</p>
 
       {message && <div className="alert alert-success">{message}</div>}
@@ -103,7 +103,7 @@ export default function AdminContent() {
 
       {loading ? <p style={{ textAlign: 'center', color: 'var(--muted)' }}>Loading...</p>
         : filtered.length === 0 ? (
-          <div className="empty-state"><div className="empty-icon">🃏</div><p>No cards found.</p></div>
+          <div className="empty-state"><div className="empty-icon">📇</div><p>No cards found.</p></div>
         ) : filtered.map(card => (
           <div key={card.id} className="card" style={{ marginBottom: 12 }}>
             {editingId === card.id ? (
