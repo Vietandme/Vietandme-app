@@ -26,7 +26,7 @@ export default function StudentDashboard({ profile }) {
   return (
     <div>
       <div className="dashboard-welcome">
-        <h1>Xin chào, {profile?.full_name?.split(' ')[0] || 'bạn'} 👋</h1>
+        <h1>Chào {profile?.full_name?.split(' ')[0] || 'bạn'} 👋</h1>
         <p style={{ marginTop: 8 }}>
           <span className={`level-badge ${levelClass}`}>{profile?.level || 'beginner'}</span>
         </p>
