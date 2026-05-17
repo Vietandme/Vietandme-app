@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminFeedback from './pages/AdminFeedback';
 import AdminUpload from './pages/AdminUpload';
 import AdminStudents from './pages/AdminStudents';
+import AdminContent from './pages/AdminContent';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -64,6 +65,7 @@ export default function App() {
                 <Route path="/admin/feedback" element={<AdminFeedback />} />
                 <Route path="/admin/upload" element={<AdminUpload />} />
                 <Route path="/admin/students" element={<AdminStudents />} />
+                <Route path="/admin/content" element={<AdminContent />} />
               </>
             ) : (
               <>

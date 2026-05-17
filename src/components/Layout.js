@@ -18,6 +18,7 @@ export default function Layout({ profile }) {
   const adminNav = [
     { path: '/', icon: '🏠', label: 'Home' },
     { path: '/admin/feedback', icon: '🎙️', label: 'Feedback' },
+    { path: '/admin/content', icon: '🃏', label: 'Cards' },
     { path: '/admin/upload', icon: '📤', label: 'Upload' },
     { path: '/admin/students', icon: '👥', label: 'Students' },
   ];
