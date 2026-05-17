@@ -146,8 +146,8 @@ export default function AdminQuiz() {
                   </div>
                 </div>
                 <div className="form-group" style={{ marginBottom: 12 }}>
-                  <label>Explanation (shown after student answers)</label>
-                  <textarea value={editForm.explanation} onChange={e => setEditForm({ ...editForm, explanation: e.target.value })} rows={3} style={{ resize: 'none' }} placeholder="e.g. 'Chưa' means 'not yet', while 'không' means 'not'. Use 'chưa' when something hasn't happened yet..." />
+                  <label>💡 Explanation (shown to student after answering)</label>
+                  <textarea value={editForm.explanation} onChange={e => setEditForm({ ...editForm, explanation: e.target.value })} rows={3} style={{ resize: 'none' }} placeholder="e.g. 'Chưa' means not yet, while 'không' means not at all..." />
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="btn btn-primary btn-sm" onClick={saveEdit} disabled={saving}>{saving ? 'Saving...' : '✓ Save'}</button>
