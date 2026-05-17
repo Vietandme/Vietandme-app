@@ -20,7 +20,6 @@ export default function AdminUpload() {
       const wb = XLSX.read(data);
       let counts = { flashcards: 0, quiz: 0 };
 
-      // Process Flashcards sheet
       if (wb.SheetNames.includes('Flashcards')) {
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['Flashcards']);
         const flashcards = rows.map(r => ({
@@ -30,6 +29,8 @@ export default function AdminUpload() {
           example: r['Example'] || r['example'] || '',
           level: (r['Level'] || r['level'] || 'beginner').toLowerCase(),
           category: r['Category'] || r['category'] || '',
+          lesson: r['Lesson'] || r['lesson'] || '',
+          audio_url: r['Audio URL'] || r['audio_url'] || '',
         })).filter(f => f.vietnamese && f.english);
 
         if (flashcards.length > 0) {
@@ -38,7 +39,6 @@ export default function AdminUpload() {
         }
       }
 
-      // Process Quiz sheet
       if (wb.SheetNames.includes('Quiz')) {
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['Quiz']);
         const questions = rows.map(r => ({
@@ -93,15 +93,16 @@ export default function AdminUpload() {
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--dark)' }}>Sheet 1: "Flashcards"</div>
-          <div style={{ background: 'var(--cream)', borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'monospace' }}>
-            Vietnamese | English | Pronunciation | Example | Level | Category
+          <div style={{ background: 'var(--cream)', borderRadius: 8, padding: 10, fontSize: 12, fontFamily: 'monospace', overflowX: 'auto' }}>
+            Vietnamese | English | Pronunciation | Example | Level | Category | Lesson | Audio URL
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Level values: beginner / intermediate / advanced</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Level: beginner / pre-intermediate / intermediate / upper-intermediate / advanced</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Lesson: 01 to 15 · Audio URL: optional, leave blank for now</div>
         </div>
 
         <div>
           <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--dark)' }}>Sheet 2: "Quiz"</div>
-          <div style={{ background: 'var(--cream)', borderRadius: 8, padding: 10, fontSize: 13, fontFamily: 'monospace' }}>
+          <div style={{ background: 'var(--cream)', borderRadius: 8, padding: 10, fontSize: 12, fontFamily: 'monospace', overflowX: 'auto' }}>
             Question | Option A | Option B | Option C | Option D | Correct Answer | Level
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Correct Answer must exactly match one of the options</div>
@@ -111,26 +112,22 @@ export default function AdminUpload() {
       <div className="card">
         <h3 className="card-title">💡 Example Row (Flashcards)</h3>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: 'var(--cream)' }}>
-                {['Vietnamese', 'English', 'Pronunciation', 'Level'].map(h => (
-                  <th key={h} style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)', borderBottom: '1px solid #E8E8F0' }}>{h}</th>
+                {['Vietnamese', 'English', 'Pronunciation', 'Level', 'Lesson', 'Audio URL'].map(h => (
+                  <th key={h} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)', borderBottom: '1px solid #E8E8F0', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style={{ padding: '8px 10px' }}>Xin chào</td>
-                <td style={{ padding: '8px 10px' }}>Hello</td>
-                <td style={{ padding: '8px 10px' }}>sin chow</td>
-                <td style={{ padding: '8px 10px' }}>beginner</td>
-              </tr>
-              <tr style={{ background: 'var(--cream)' }}>
-                <td style={{ padding: '8px 10px' }}>Cảm ơn</td>
-                <td style={{ padding: '8px 10px' }}>Thank you</td>
-                <td style={{ padding: '8px 10px' }}>kahm uhn</td>
-                <td style={{ padding: '8px 10px' }}>beginner</td>
+                <td style={{ padding: '8px' }}>Xin chào</td>
+                <td style={{ padding: '8px' }}>Hello</td>
+                <td style={{ padding: '8px' }}>sin chow</td>
+                <td style={{ padding: '8px' }}>beginner</td>
+                <td style={{ padding: '8px' }}>01</td>
+                <td style={{ padding: '8px', color: 'var(--muted)' }}>(leave blank)</td>
               </tr>
             </tbody>
           </table>
