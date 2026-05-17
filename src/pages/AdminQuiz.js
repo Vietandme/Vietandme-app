@@ -36,8 +36,6 @@ export default function AdminQuiz() {
       option_c: q.option_c || '',
       correct_answer: q.correct_answer || '',
       explanation: q.explanation || '',
-      category: q.category || '',
-      audio_url: q.audio_url || '',
       level: q.level || 'beginner',
       lesson: q.lesson || '',
     });
@@ -54,8 +52,6 @@ export default function AdminQuiz() {
       option_c: editForm.option_c,
       correct_answer: editForm.correct_answer,
       explanation: editForm.explanation,
-      category: editForm.category,
-      audio_url: editForm.audio_url,
       level: editForm.level,
       lesson: editForm.lesson || null,
     }).eq('id', editingId);
@@ -148,14 +144,6 @@ export default function AdminQuiz() {
                       {LESSONS.map(l => <option key={l} value={l}>Lesson {l}</option>)}
                     </select>
                   </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Category</label>
-                    <input value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })} placeholder="e.g. grammar, vocabulary..." />
-                  </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Audio URL</label>
-                    <input value={editForm.audio_url} onChange={e => setEditForm({ ...editForm, audio_url: e.target.value })} placeholder="Leave blank for now" />
-                  </div>
                 </div>
                 <div className="form-group" style={{ marginBottom: 12 }}>
                   <label>💡 Explanation (shown to student after answering)</label>
@@ -188,7 +176,6 @@ export default function AdminQuiz() {
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 11, background: '#FDEAEA', color: 'var(--red)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{q.level}</span>
                     {q.lesson && <span style={{ fontSize: 11, background: '#E8E8F0', padding: '2px 8px', borderRadius: 10, color: 'var(--muted)' }}>Lesson {q.lesson}</span>}
-                    {q.category && <span style={{ fontSize: 11, background: '#E8E8F0', padding: '2px 8px', borderRadius: 10, color: 'var(--muted)' }}>{q.category}</span>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
