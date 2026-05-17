@@ -35,6 +35,7 @@ export default function AdminQuiz() {
       option_b: q.option_b || '',
       option_c: q.option_c || '',
       correct_answer: q.correct_answer || '',
+      explanation: q.explanation || '',
       level: q.level || 'beginner',
       lesson: q.lesson || '',
     });
@@ -50,12 +51,12 @@ export default function AdminQuiz() {
       option_b: editForm.option_b,
       option_c: editForm.option_c,
       correct_answer: editForm.correct_answer,
+      explanation: editForm.explanation,
       level: editForm.level,
       lesson: editForm.lesson || null,
     }).eq('id', editingId);
-    if (error) {
-      alert('Save failed: ' + error.message);
-    } else {
+    if (error) { alert('Save failed: ' + error.message); }
+    else {
       setMessage('Question updated!');
       setTimeout(() => setMessage(''), 2000);
       setEditingId(null);
@@ -106,7 +107,7 @@ export default function AdminQuiz() {
               <div>
                 <div className="form-group">
                   <label>Question</label>
-                  <textarea value={editForm.question} onChange={e => setEditForm({ ...editForm, question: e.target.value })} rows={2} style={{ resize: 'none' }} />
+                  <textarea value={editForm.question} onChange={e => setEditForm({ ...editForm, question: e.target.value })} rows={3} style={{ resize: 'none' }} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                   <div className="form-group" style={{ marginBottom: 0 }}>
@@ -144,6 +145,10 @@ export default function AdminQuiz() {
                     </select>
                   </div>
                 </div>
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label>Explanation (shown after student answers)</label>
+                  <textarea value={editForm.explanation} onChange={e => setEditForm({ ...editForm, explanation: e.target.value })} rows={3} style={{ resize: 'none' }} placeholder="e.g. 'Chưa' means 'not yet', while 'không' means 'not'. Use 'chưa' when something hasn't happened yet..." />
+                </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="btn btn-primary btn-sm" onClick={saveEdit} disabled={saving}>{saving ? 'Saving...' : '✓ Save'}</button>
                   <button className="btn btn-secondary btn-sm" onClick={cancelEdit}>Cancel</button>
@@ -163,6 +168,11 @@ export default function AdminQuiz() {
                       </div>
                     ))}
                   </div>
+                  {q.explanation && (
+                    <div style={{ background: '#E8F8EF', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#1A7A40', marginBottom: 8 }}>
+                      💡 {q.explanation}
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 11, background: '#FDEAEA', color: 'var(--red)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{q.level}</span>
                     {q.lesson && <span style={{ fontSize: 11, background: '#E8E8F0', padding: '2px 8px', borderRadius: 10, color: 'var(--muted)' }}>Lesson {q.lesson}</span>}
