@@ -31,8 +31,7 @@ export default function Quiz() {
   function handleSelect(option) {
     if (selected) return;
     setSelected(option);
-    const correct = option === questions[index].correct_answer;
-    if (correct) setScore(s => s + 1);
+    if (option === questions[index].correct_answer) setScore(s => s + 1);
   }
 
   async function handleNext() {
@@ -57,8 +56,8 @@ export default function Quiz() {
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 16 }}>Quiz ✏️</h1>
       <div className="level-tabs">
-        {['all', 'beginner', 'intermediate', 'advanced'].map(l => (
-          <button key={l} className={`level-tab ${level === l ? 'active' : ''}`} onClick={() => setLevel(l)}>{l.charAt(0).toUpperCase() + l.slice(1)}</button>
+        {['all', 'beginner', 'pre-intermediate', 'intermediate', 'upper-intermediate', 'advanced'].map(l => (
+          <button key={l} className={`level-tab ${level === l ? 'active' : ''}`} onClick={() => setLevel(l)} style={{ fontSize: 12 }}>{l === 'all' ? 'All' : l.charAt(0).toUpperCase() + l.slice(1)}</button>
         ))}
       </div>
       <div className="empty-state"><div className="empty-icon">✏️</div><p>No quiz questions yet for this level.</p></div>
@@ -73,9 +72,7 @@ export default function Quiz() {
         <div style={{ fontSize: 20, margin: '12px 0', fontFamily: 'Playfair Display, serif' }}>
           {score === questions.length ? '🏆 Perfect!' : score >= questions.length * 0.7 ? '🎉 Great job!' : '💪 Keep practising!'}
         </div>
-        <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
-          {Math.round((score / questions.length) * 100)}% correct
-        </p>
+        <p style={{ color: 'var(--muted)', marginBottom: 24 }}>{Math.round((score / questions.length) * 100)}% correct</p>
         <button className="btn btn-primary" onClick={loadQuiz}>Try Again</button>
       </div>
     </div>
@@ -84,9 +81,9 @@ export default function Quiz() {
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 16 }}>Quiz ✏️</h1>
-      <div className="level-tabs">
-        {['all', 'beginner', 'intermediate', 'advanced'].map(l => (
-          <button key={l} className={`level-tab ${level === l ? 'active' : ''}`} onClick={() => setLevel(l)}>{l.charAt(0).toUpperCase() + l.slice(1)}</button>
+      <div className="level-tabs" style={{ marginBottom: 16 }}>
+        {['all', 'beginner', 'pre-intermediate', 'intermediate', 'upper-intermediate', 'advanced'].map(l => (
+          <button key={l} className={`level-tab ${level === l ? 'active' : ''}`} onClick={() => setLevel(l)} style={{ fontSize: 12 }}>{l === 'all' ? 'All' : l.charAt(0).toUpperCase() + l.slice(1)}</button>
         ))}
       </div>
 
@@ -123,6 +120,11 @@ export default function Quiz() {
           <div className="quiz-feedback" style={{ color: selected === q.correct_answer ? 'var(--success)' : 'var(--error)' }}>
             {selected === q.correct_answer ? '✓ Correct!' : `✗ The answer is: ${q.correct_answer}`}
           </div>
+          {q.explanation && (
+            <div style={{ background: '#E8F8EF', borderRadius: 12, padding: '12px 16px', marginTop: 12, fontSize: 14, color: '#1A7A40', borderLeft: '3px solid var(--success)' }}>
+              <strong>💡 Explanation:</strong> {q.explanation}
+            </div>
+          )}
           <div style={{ textAlign: 'center', marginTop: 16 }}>
             <button className="btn btn-primary" onClick={handleNext}>
               {index + 1 >= questions.length ? 'See Results' : 'Next Question →'}
