@@ -9,7 +9,7 @@ export default function Layout({ profile }) {
 
   const studentNav = [
     { path: '/', icon: '🏠', label: 'Home' },
-    { path: '/flashcards', icon: '📇', label: 'Cards' },
+    { path: '/flashcards', icon: '📇', label: 'Flashcards' },
     { path: '/quiz', icon: '✏️', label: 'Quiz' },
     { path: '/recording', icon: '🎙️', label: 'Record' },
     { path: '/progress', icon: '📊', label: 'Progress' },
@@ -18,7 +18,7 @@ export default function Layout({ profile }) {
   const adminNav = [
     { path: '/', icon: '🏠', label: 'Home' },
     { path: '/admin/feedback', icon: '🎙️', label: 'Feedback' },
-    { path: '/admin/content', icon: '📇', label: 'Cards' },
+    { path: '/admin/content', icon: '📇', label: 'Flashcards' },
     { path: '/admin/quiz', icon: '✏️', label: 'Quiz' },
     { path: '/admin/upload', icon: '📤', label: 'Upload' },
     { path: '/admin/students', icon: '👥', label: 'Students' },
