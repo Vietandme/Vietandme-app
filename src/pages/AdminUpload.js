@@ -27,15 +27,16 @@ export default function AdminUpload() {
           english: r['English'] || r['english'] || '',
           pronunciation: r['Pronunciation'] || r['pronunciation'] || '',
           example: r['Example'] || r['example'] || '',
-          level: (r['Level'] || r['level'] || 'beginner').toLowerCase(),
+          level: (r['Level'] || r['level'] || 'beginner').toLowerCase().trim(),
           category: r['Category'] || r['category'] || '',
-          lesson: r['Lesson'] || r['lesson'] || '',
+          lesson: String(r['Lesson'] || r['lesson'] || '').trim().padStart(2, '0').replace(/^0+$/, '') || '',
           audio_url: r['Audio URL'] || r['audio_url'] || '',
         })).filter(f => f.vietnamese && f.english);
 
         if (flashcards.length > 0) {
           const { error } = await supabase.from('flashcards').insert(flashcards);
           if (!error) counts.flashcards = flashcards.length;
+          else setError('Flashcards error: ' + error.message);
         }
       }
 
@@ -46,20 +47,22 @@ export default function AdminUpload() {
           option_a: r['Option A'] || r['option_a'] || '',
           option_b: r['Option B'] || r['option_b'] || '',
           option_c: r['Option C'] || r['option_c'] || '',
-          option_d: r['Option D'] || r['option_d'] || '',
           correct_answer: r['Correct Answer'] || r['correct_answer'] || '',
-          level: (r['Level'] || r['level'] || 'beginner').toLowerCase(),
+          explanation: r['Explanation'] || r['explanation'] || '',
+          level: (r['Level'] || r['level'] || 'beginner').toLowerCase().trim(),
+          lesson: String(r['Lesson'] || r['lesson'] || '').trim().padStart(2, '0').replace(/^0+$/, '') || '',
         })).filter(q => q.question && q.correct_answer);
 
         if (questions.length > 0) {
           const { error } = await supabase.from('quiz_questions').insert(questions);
           if (!error) counts.quiz = questions.length;
+          else setError('Quiz error: ' + error.message);
         }
       }
 
       setResult(counts);
     } catch (err) {
-      setError('Failed to process file. Please check the format and try again.');
+      setError('Failed to process file: ' + err.message);
     }
     setUploading(false);
     e.target.value = '';
@@ -89,7 +92,6 @@ export default function AdminUpload() {
 
       <div className="card">
         <h3 className="card-title">📋 Required Format</h3>
-        <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 16 }}>Your Excel file needs these sheet names and columns:</p>
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--dark)' }}>Sheet 1: "Flashcards"</div>
@@ -97,40 +99,25 @@ export default function AdminUpload() {
             Vietnamese | English | Pronunciation | Example | Level | Category | Lesson | Audio URL
           </div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Level: beginner / pre-intermediate / intermediate / upper-intermediate / advanced</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Lesson: 01 to 15 · Audio URL: optional, leave blank for now</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Lesson: 1–15 · Audio URL: leave blank for now</div>
         </div>
 
         <div>
           <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--dark)' }}>Sheet 2: "Quiz"</div>
           <div style={{ background: 'var(--cream)', borderRadius: 8, padding: 10, fontSize: 12, fontFamily: 'monospace', overflowX: 'auto' }}>
-            Question | Option A | Option B | Option C | Option D | Correct Answer | Level
+            Question | Option A | Option B | Option C | Correct Answer | Explanation | Level | Lesson
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Correct Answer must exactly match one of the options</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Correct Answer must exactly match one of the options · Explanation is optional</div>
         </div>
       </div>
 
       <div className="card">
-        <h3 className="card-title">💡 Example Row (Flashcards)</h3>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ background: 'var(--cream)' }}>
-                {['Vietnamese', 'English', 'Pronunciation', 'Level', 'Lesson', 'Audio URL'].map(h => (
-                  <th key={h} style={{ padding: '6px 8px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)', borderBottom: '1px solid #E8E8F0', whiteSpace: 'nowrap' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ padding: '8px' }}>Xin chào</td>
-                <td style={{ padding: '8px' }}>Hello</td>
-                <td style={{ padding: '8px' }}>sin chow</td>
-                <td style={{ padding: '8px' }}>beginner</td>
-                <td style={{ padding: '8px' }}>01</td>
-                <td style={{ padding: '8px', color: 'var(--muted)' }}>(leave blank)</td>
-              </tr>
-            </tbody>
-          </table>
+        <h3 className="card-title">💡 Tips</h3>
+        <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
+          <p>• You can upload multiple times — new rows are always added on top</p>
+          <p>• Lesson numbers like 1, 2, 10 are all fine — no need for leading zeros</p>
+          <p>• Leave Audio URL blank — you can add it later via the Cards tab</p>
+          <p>• If upload shows 0 items, check your sheet tab names are exactly "Flashcards" and "Quiz"</p>
         </div>
       </div>
     </div>
