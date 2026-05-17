@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function Recording({ profile }) {
-  const [status, setStatus] = useState('idle'); // idle | recording | done
+  const [status, setStatus] = useState('idle');
   const [note, setNote] = useState('');
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioUrl, setAudioUrl] = useState(null);
@@ -12,9 +12,7 @@ export default function Recording({ profile }) {
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
 
-  useEffect(() => { loadSubmissions(); }, [profile]);
-
-  async function loadSubmissions() {
+  const loadSubmissions = useCallback(async () => {
     if (!profile) return;
     const { data } = await supabase
       .from('recordings')
@@ -22,7 +20,9 @@ export default function Recording({ profile }) {
       .eq('user_id', profile.id)
       .order('created_at', { ascending: false });
     setSubmissions(data || []);
-  }
+  }, [profile]);
+
+  useEffect(() => { loadSubmissions(); }, [loadSubmissions]);
 
   async function startRecording() {
     try {
