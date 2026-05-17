@@ -13,6 +13,7 @@ import AdminFeedback from './pages/AdminFeedback';
 import AdminUpload from './pages/AdminUpload';
 import AdminStudents from './pages/AdminStudents';
 import AdminContent from './pages/AdminContent';
+import AdminQuiz from './pages/AdminQuiz';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -27,13 +28,11 @@ export default function App() {
       if (session) fetchProfile(session.user.id);
       else setLoading(false);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) fetchProfile(session.user.id);
       else { setProfile(null); setLoading(false); }
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -66,6 +65,7 @@ export default function App() {
                 <Route path="/admin/upload" element={<AdminUpload />} />
                 <Route path="/admin/students" element={<AdminStudents />} />
                 <Route path="/admin/content" element={<AdminContent />} />
+                <Route path="/admin/quiz" element={<AdminQuiz />} />
               </>
             ) : (
               <>
