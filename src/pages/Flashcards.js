@@ -16,10 +16,6 @@ export default function Flashcards() {
   const [userId, setUserId] = useState(null);
   const [marking, setMarking] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
-  }, []);
-
   const loadCompletions = useCallback(async (uid) => {
     if (!uid) return;
     const { data } = await supabase.from('lesson_completions').select('*').eq('user_id', uid).eq('type', 'flashcards');
@@ -56,12 +52,21 @@ export default function Flashcards() {
     return completions.some(c => c.level === lvl && c.lesson === ls);
   }
 
-  async function markDone() {
+  async function markCompleted() {
     if (!userId || level === 'all' || lesson === 'all') return;
     setMarking(true);
     await supabase.from('lesson_completions').upsert({
       user_id: userId, level, lesson, type: 'flashcards'
     }, { onConflict: 'user_id,level,lesson,type' });
+    await loadCompletions(userId);
+    setMarking(false);
+  }
+
+  async function markIncomplete() {
+    if (!userId || level === 'all' || lesson === 'all') return;
+    setMarking(true);
+    await supabase.from('lesson_completions').delete()
+      .eq('user_id', userId).eq('level', level).eq('lesson', lesson).eq('type', 'flashcards');
     await loadCompletions(userId);
     setMarking(false);
   }
@@ -91,7 +96,12 @@ export default function Flashcards() {
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Level</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {LEVELS.map(l => (
-            <button key={l} className={`level-tab ${level === l ? 'active' : ''}`} onClick={() => { setLevel(l); setLesson('all'); }} style={{ fontSize: 12, padding: '4px 12px' }}>
+            <button key={l} onClick={() => { setLevel(l); setLesson('all'); }} style={{
+              fontSize: 12, padding: '4px 12px', borderRadius: 20, fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+              border: `2px solid ${level === l ? 'var(--red)' : '#E8E8F0'}`,
+              background: level === l ? 'var(--red)' : 'var(--white)',
+              color: level === l ? 'white' : 'var(--text)',
+            }}>
               {l === 'all' ? 'All' : l.charAt(0).toUpperCase() + l.slice(1)}
             </button>
           ))}
@@ -103,15 +113,16 @@ export default function Flashcards() {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {LESSONS.map(ls => {
             const done = ls !== 'all' && level !== 'all' && isCompleted(level, ls);
+            const active = lesson === ls;
             return (
               <button key={ls} onClick={() => setLesson(ls)} style={{
-                fontSize: 12, padding: '4px 10px', minWidth: 40,
-                borderRadius: 20, border: `2px solid ${lesson === ls ? (done ? 'var(--success)' : 'var(--red)') : done ? 'var(--success)' : '#E8E8F0'}`,
-                background: lesson === ls ? (done ? 'var(--success)' : 'var(--red)') : done ? '#E8F8EF' : 'var(--white)',
-                color: lesson === ls ? 'white' : done ? 'var(--success)' : 'var(--text)',
-                fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif',
+                fontSize: 12, padding: '4px 10px', minWidth: 40, borderRadius: 20,
+                fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+                border: `2px solid ${active ? (done ? '#27AE60' : 'var(--red)') : done ? '#27AE60' : '#E8E8F0'}`,
+                background: active ? (done ? '#27AE60' : 'var(--red)') : done ? '#E8F8EF' : 'var(--white)',
+                color: active ? 'white' : done ? '#27AE60' : 'var(--text)',
               }}>
-                {ls === 'all' ? 'All' : ls} {done ? '✓' : ''}
+                {ls === 'all' ? 'All' : ls}{done ? ' ✓' : ''}
               </button>
             );
           })}
@@ -147,20 +158,33 @@ export default function Flashcards() {
             </div>
 
             <div style={{ textAlign: 'center', marginTop: 16 }}>
-              <button className="btn btn-secondary btn-sm" onClick={loadCards} style={{ marginRight: 8 }}>🔀 Shuffle</button>
+              <button className="btn btn-secondary btn-sm" onClick={loadCards}>🔀 Shuffle</button>
             </div>
 
             {isLastCard && level !== 'all' && lesson !== 'all' && (
-              <div style={{ textAlign: 'center', marginTop: 16 }}>
-                {currentlyDone ? (
-                  <div style={{ background: '#E8F8EF', borderRadius: 12, padding: '12px 20px', color: 'var(--success)', fontWeight: 600 }}>
-                    ✓ Lesson {lesson} flashcards completed!
-                  </div>
-                ) : (
-                  <button className="btn btn-gold btn-full" onClick={markDone} disabled={marking}>
-                    {marking ? 'Saving...' : '🎉 Mark Lesson as Done'}
-                  </button>
-                )}
+              <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button
+                  onClick={markCompleted}
+                  disabled={marking}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: 12, border: `2px solid ${currentlyDone ? '#27AE60' : '#E8E8F0'}`,
+                    background: currentlyDone ? '#27AE60' : 'var(--white)', color: currentlyDone ? 'white' : 'var(--muted)',
+                    fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  {currentlyDone ? '✓ Lesson Completed!' : '🎉 Mark Lesson as Completed'}
+                </button>
+                <button
+                  onClick={markIncomplete}
+                  disabled={marking}
+                  style={{
+                    width: '100%', padding: '14px', borderRadius: 12, border: `2px solid ${!currentlyDone ? 'var(--red)' : '#E8E8F0'}`,
+                    background: !currentlyDone ? '#FFF0F0' : 'var(--white)', color: !currentlyDone ? 'var(--red)' : 'var(--muted)',
+                    fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  ↩️ Mark as Incomplete — I want to do it again
+                </button>
               </div>
             )}
           </>
