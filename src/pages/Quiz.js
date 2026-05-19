@@ -13,6 +13,8 @@ export default function Quiz() {
   const [done, setDone] = useState(false);
   const [level, setLevel] = useState('all');
   const [lesson, setLesson] = useState('all');
+  const [category, setCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
   const [completions, setCompletions] = useState([]);
@@ -30,19 +32,27 @@ export default function Quiz() {
       setUserId(data.user?.id);
       loadCompletions(data.user?.id);
     });
+    loadCategories();
   }, [loadCompletions]);
+
+  async function loadCategories() {
+    const { data } = await supabase.from('quiz_questions').select('category').not('category', 'is', null).neq('category', '');
+    const unique = ['all', ...new Set((data || []).map(d => d.category).filter(Boolean).sort())];
+    setCategories(unique);
+  }
 
   const loadQuiz = useCallback(async () => {
     setLoading(true);
     let query = supabase.from('quiz_questions').select('*');
     if (level !== 'all') query = query.eq('level', level);
     if (lesson !== 'all') query = query.eq('lesson', lesson);
+    if (category !== 'all') query = query.eq('category', category);
     const { data } = await query;
     const shuffled = (data || []).sort(() => Math.random() - 0.5).slice(0, 10);
     setQuestions(shuffled);
     setIndex(0); setSelected(null); setScore(0); setDone(false);
     setLoading(false);
-  }, [level, lesson]);
+  }, [level, lesson, category]);
 
   useEffect(() => { loadQuiz(); }, [loadQuiz]);
 
@@ -105,7 +115,6 @@ export default function Quiz() {
         <p style={{ color: 'var(--muted)', marginBottom: 24 }}>{Math.round((score / questions.length) * 100)}% correct</p>
         <button className="btn btn-primary" onClick={loadQuiz} style={{ marginBottom: 8 }}>Try Again</button>
       </div>
-
       {level !== 'all' && lesson !== 'all' && (
         <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button onClick={markCompleted} disabled={marking} style={{
@@ -151,7 +160,7 @@ export default function Quiz() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Lesson</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {LESSONS.map(ls => {
@@ -169,6 +178,22 @@ export default function Quiz() {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Category</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {categories.map(c => (
+            <button key={c} onClick={() => setCategory(c)} style={{
+              fontSize: 12, padding: '4px 12px', borderRadius: 20, fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+              border: '2px solid ' + (category === c ? 'var(--gold)' : '#E8E8F0'),
+              background: category === c ? 'var(--gold)' : 'var(--white)',
+              color: category === c ? 'var(--dark)' : 'var(--text)',
+            }}>
+              {c === 'all' ? 'All' : c.charAt(0).toUpperCase() + c.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
