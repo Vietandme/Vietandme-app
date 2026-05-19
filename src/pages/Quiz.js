@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 const LEVELS = ['all', 'beginner', 'pre-intermediate', 'intermediate', 'upper-intermediate', 'advanced'];
 const LESSONS = ['all', ...Array.from({ length: 15 }, (_, i) => String(i + 1).padStart(2, '0'))];
@@ -16,6 +17,7 @@ export default function Quiz() {
   const [userId, setUserId] = useState(null);
   const [completions, setCompletions] = useState([]);
   const [marking, setMarking] = useState(false);
+  const navigate = useNavigate();
 
   const loadCompletions = useCallback(async (uid) => {
     if (!uid) return;
@@ -54,8 +56,8 @@ export default function Quiz() {
     await supabase.from('lesson_completions').upsert({
       user_id: userId, level, lesson, type: 'quiz'
     }, { onConflict: 'user_id,level,lesson,type' });
-    await loadCompletions(userId);
     setMarking(false);
+    navigate('/');
   }
 
   async function markIncomplete() {
@@ -63,8 +65,8 @@ export default function Quiz() {
     setMarking(true);
     await supabase.from('lesson_completions').delete()
       .eq('user_id', userId).eq('level', level).eq('lesson', lesson).eq('type', 'quiz');
-    await loadCompletions(userId);
     setMarking(false);
+    navigate('/');
   }
 
   function handleSelect(option) {
@@ -101,7 +103,7 @@ export default function Quiz() {
           {score === questions.length ? '🏆 Perfect!' : score >= questions.length * 0.7 ? '🎉 Great job!' : '💪 Keep practising!'}
         </div>
         <p style={{ color: 'var(--muted)', marginBottom: 24 }}>{Math.round((score / questions.length) * 100)}% correct</p>
-        <button className="btn btn-primary" onClick={loadQuiz} style={{ marginBottom: 16 }}>Try Again</button>
+        <button className="btn btn-primary" onClick={loadQuiz} style={{ marginBottom: 8 }}>Try Again</button>
       </div>
 
       {level !== 'all' && lesson !== 'all' && (
