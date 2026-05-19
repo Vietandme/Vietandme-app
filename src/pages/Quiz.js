@@ -14,10 +14,21 @@ export default function Quiz() {
   const [lesson, setLesson] = useState('all');
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState(null);
+  const [completions, setCompletions] = useState([]);
+  const [marking, setMarking] = useState(false);
+
+  const loadCompletions = useCallback(async (uid) => {
+    if (!uid) return;
+    const { data } = await supabase.from('lesson_completions').select('*').eq('user_id', uid).eq('type', 'quiz');
+    setCompletions(data || []);
+  }, []);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
-  }, []);
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id);
+      loadCompletions(data.user?.id);
+    });
+  }, [loadCompletions]);
 
   const loadQuiz = useCallback(async () => {
     setLoading(true);
@@ -32,6 +43,29 @@ export default function Quiz() {
   }, [level, lesson]);
 
   useEffect(() => { loadQuiz(); }, [loadQuiz]);
+
+  function isCompleted(lvl, ls) {
+    return completions.some(c => c.level === lvl && c.lesson === ls);
+  }
+
+  async function markCompleted() {
+    if (!userId || level === 'all' || lesson === 'all') return;
+    setMarking(true);
+    await supabase.from('lesson_completions').upsert({
+      user_id: userId, level, lesson, type: 'quiz'
+    }, { onConflict: 'user_id,level,lesson,type' });
+    await loadCompletions(userId);
+    setMarking(false);
+  }
+
+  async function markIncomplete() {
+    if (!userId || level === 'all' || lesson === 'all') return;
+    setMarking(true);
+    await supabase.from('lesson_completions').delete()
+      .eq('user_id', userId).eq('level', level).eq('lesson', lesson).eq('type', 'quiz');
+    await loadCompletions(userId);
+    setMarking(false);
+  }
 
   function handleSelect(option) {
     if (selected) return;
@@ -54,6 +88,7 @@ export default function Quiz() {
   }
 
   const q = questions[index];
+  const currentlyDone = level !== 'all' && lesson !== 'all' && isCompleted(level, lesson);
 
   if (loading) return <p style={{ textAlign: 'center', marginTop: 40, color: 'var(--muted)' }}>Loading quiz...</p>;
 
@@ -66,8 +101,31 @@ export default function Quiz() {
           {score === questions.length ? '🏆 Perfect!' : score >= questions.length * 0.7 ? '🎉 Great job!' : '💪 Keep practising!'}
         </div>
         <p style={{ color: 'var(--muted)', marginBottom: 24 }}>{Math.round((score / questions.length) * 100)}% correct</p>
-        <button className="btn btn-primary" onClick={loadQuiz}>Try Again</button>
+        <button className="btn btn-primary" onClick={loadQuiz} style={{ marginBottom: 16 }}>Try Again</button>
       </div>
+
+      {level !== 'all' && lesson !== 'all' && (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <button onClick={markCompleted} disabled={marking} style={{
+            width: '100%', padding: '14px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s',
+            fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 600,
+            border: '2px solid ' + (currentlyDone ? '#27AE60' : '#E8E8F0'),
+            background: currentlyDone ? '#27AE60' : 'var(--white)',
+            color: currentlyDone ? 'white' : 'var(--muted)',
+          }}>
+            {currentlyDone ? '✓ Lesson Completed!' : '🎉 Mark Lesson as Completed'}
+          </button>
+          <button onClick={markIncomplete} disabled={marking} style={{
+            width: '100%', padding: '14px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s',
+            fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 600,
+            border: '2px solid ' + (!currentlyDone ? 'var(--red)' : '#E8E8F0'),
+            background: !currentlyDone ? '#FFF0F0' : 'var(--white)',
+            color: !currentlyDone ? 'var(--red)' : 'var(--muted)',
+          }}>
+            ↩️ Mark as Incomplete — I want to do it again
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -79,7 +137,12 @@ export default function Quiz() {
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Level</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {LEVELS.map(l => (
-            <button key={l} className={`level-tab ${level === l ? 'active' : ''}`} onClick={() => { setLevel(l); setLesson('all'); }} style={{ fontSize: 12, padding: '4px 12px' }}>
+            <button key={l} onClick={() => { setLevel(l); setLesson('all'); }} style={{
+              fontSize: 12, padding: '4px 12px', borderRadius: 20, fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+              border: '2px solid ' + (level === l ? 'var(--red)' : '#E8E8F0'),
+              background: level === l ? 'var(--red)' : 'var(--white)',
+              color: level === l ? 'white' : 'var(--text)',
+            }}>
               {l === 'all' ? 'All' : l.charAt(0).toUpperCase() + l.slice(1)}
             </button>
           ))}
@@ -89,11 +152,21 @@ export default function Quiz() {
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Lesson</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {LESSONS.map(ls => (
-            <button key={ls} className={`level-tab ${lesson === ls ? 'active' : ''}`} onClick={() => setLesson(ls)} style={{ fontSize: 12, padding: '4px 10px', minWidth: 40 }}>
-              {ls === 'all' ? 'All' : ls}
-            </button>
-          ))}
+          {LESSONS.map(ls => {
+            const done = ls !== 'all' && level !== 'all' && isCompleted(level, ls);
+            const active = lesson === ls;
+            return (
+              <button key={ls} onClick={() => setLesson(ls)} style={{
+                fontSize: 12, padding: '4px 10px', minWidth: 40, borderRadius: 20,
+                fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+                border: '2px solid ' + (active ? (done ? '#27AE60' : 'var(--red)') : done ? '#27AE60' : '#E8E8F0'),
+                background: active ? (done ? '#27AE60' : 'var(--red)') : done ? '#E8F8EF' : 'var(--white)',
+                color: active ? 'white' : done ? '#27AE60' : 'var(--text)',
+              }}>
+                {ls === 'all' ? 'All' : ls}{done ? ' ✓' : ''}
+              </button>
+            );
+          })}
         </div>
       </div>
 
