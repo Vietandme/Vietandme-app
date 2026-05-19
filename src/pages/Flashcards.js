@@ -14,7 +14,7 @@ export default function Flashcards() {
   const [category, setCategory] = useState('all');
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [frontLang, setFrontLang] = useState('vietnamese');
+  const [frontLang, setFrontLang] = useState('english');
   const [completions, setCompletions] = useState([]);
   const [userId, setUserId] = useState(null);
   const [marking, setMarking] = useState(false);
