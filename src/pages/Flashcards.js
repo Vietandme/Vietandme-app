@@ -11,6 +11,8 @@ export default function Flashcards() {
   const [flipped, setFlipped] = useState(false);
   const [level, setLevel] = useState('all');
   const [lesson, setLesson] = useState('all');
+  const [category, setCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [frontLang, setFrontLang] = useState('vietnamese');
   const [completions, setCompletions] = useState([]);
@@ -29,19 +31,27 @@ export default function Flashcards() {
       setUserId(data.user?.id);
       loadCompletions(data.user?.id);
     });
+    loadCategories();
   }, [loadCompletions]);
+
+  async function loadCategories() {
+    const { data } = await supabase.from('flashcards').select('category').not('category', 'is', null).neq('category', '');
+    const unique = ['all', ...new Set((data || []).map(d => d.category).filter(Boolean).sort())];
+    setCategories(unique);
+  }
 
   const loadCards = useCallback(async () => {
     setLoading(true);
     let query = supabase.from('flashcards').select('*');
     if (level !== 'all') query = query.eq('level', level);
     if (lesson !== 'all') query = query.eq('lesson', lesson);
+    if (category !== 'all') query = query.eq('category', category);
     const { data } = await query;
     setCards(data ? shuffle(data) : []);
     setIndex(0);
     setFlipped(false);
     setLoading(false);
-  }, [level, lesson]);
+  }, [level, lesson, category]);
 
   useEffect(() => { loadCards(); }, [loadCards]);
 
@@ -110,7 +120,7 @@ export default function Flashcards() {
         </div>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 8 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Lesson</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {LESSONS.map(ls => {
@@ -128,6 +138,22 @@ export default function Flashcards() {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Category</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {categories.map(c => (
+            <button key={c} onClick={() => setCategory(c)} style={{
+              fontSize: 12, padding: '4px 12px', borderRadius: 20, fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+              border: '2px solid ' + (category === c ? 'var(--gold)' : '#E8E8F0'),
+              background: category === c ? 'var(--gold)' : 'var(--white)',
+              color: category === c ? 'var(--dark)' : 'var(--text)',
+            }}>
+              {c === 'all' ? 'All' : c.charAt(0).toUpperCase() + c.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
