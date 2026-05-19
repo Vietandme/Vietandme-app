@@ -18,14 +18,14 @@ export default function Layout({ profile }) {
   const adminNav = [
     { path: '/', icon: '🏠', label: 'Home' },
     { path: '/admin/feedback', icon: '🎙️', label: 'Feedback' },
-    { path: '/admin/content', icon: '📇', label: 'Flashcards' },
+    { path: '/admin/prompts', icon: '📋', label: 'Prompts' },
+    { path: '/admin/content', icon: '📇', label: 'Cards' },
     { path: '/admin/quiz', icon: '✏️', label: 'Quiz' },
     { path: '/admin/upload', icon: '📤', label: 'Upload' },
     { path: '/admin/students', icon: '👥', label: 'Students' },
   ];
 
   const navItems = isAdmin ? adminNav : studentNav;
-
   async function handleLogout() { await supabase.auth.signOut(); }
 
   return (

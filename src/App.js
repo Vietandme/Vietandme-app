@@ -14,6 +14,7 @@ import AdminUpload from './pages/AdminUpload';
 import AdminStudents from './pages/AdminStudents';
 import AdminContent from './pages/AdminContent';
 import AdminQuiz from './pages/AdminQuiz';
+import AdminPrompts from './pages/AdminPrompts';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -66,6 +67,7 @@ export default function App() {
                 <Route path="/admin/students" element={<AdminStudents />} />
                 <Route path="/admin/content" element={<AdminContent />} />
                 <Route path="/admin/quiz" element={<AdminQuiz />} />
+                <Route path="/admin/prompts" element={<AdminPrompts />} />
               </>
             ) : (
               <>
