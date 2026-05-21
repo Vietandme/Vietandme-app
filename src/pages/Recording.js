@@ -12,6 +12,7 @@ export default function Recording({ profile }) {
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [view, setView] = useState('prompts');
+  const [deleting, setDeleting] = useState(null);
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
 
@@ -93,6 +94,14 @@ export default function Recording({ profile }) {
     setUploading(false);
   }
 
+  async function deleteSubmission(id) {
+    if (!window.confirm('Delete this recording?')) return;
+    setDeleting(id);
+    await supabase.from('recordings').delete().eq('id', id);
+    setDeleting(null);
+    loadSubmissions();
+  }
+
   const typeLabel = { sentence: '📖 Read aloud', question: '❓ Answer question', topic: '🎤 Speak freely' };
   const typeColor = { sentence: '#E8F0FE', question: '#FEF3E2', topic: '#F0E8FE' };
   const typeText = { sentence: '#1A56DB', question: '#E67E22', topic: '#7C3AED' };
@@ -120,20 +129,18 @@ export default function Recording({ profile }) {
           {prompts.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">🎙️</div><p>No prompts yet. Your teacher will add them soon!</p></div>
           ) : prompts.map(p => (
-            <div key={p.id} className="card" style={{ marginBottom: 12, cursor: 'pointer', border: '2px solid transparent' }}
+            <div key={p.id} className="card" style={{ marginBottom: 12, cursor: 'pointer', border: '2px solid transparent', transition: 'border-color 0.2s' }}
               onClick={() => selectPrompt(p)}
               onMouseOver={e => e.currentTarget.style.borderColor = 'var(--red)'}
               onMouseOut={e => e.currentTarget.style.borderColor = 'transparent'}
             >
               <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6 }}>{p.title}</div>
               <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 10 }}>{p.instruction}</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 <span style={{ fontSize: 11, background: typeColor[p.type], color: typeText[p.type], padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{typeLabel[p.type]}</span>
                 {p.level !== 'all' && <span style={{ fontSize: 11, background: '#FDEAEA', color: 'var(--red)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{p.level}</span>}
               </div>
-              <div style={{ marginTop: 12 }}>
-                <span className="btn btn-primary btn-sm">🎙️ Record this</span>
-              </div>
+              <span className="btn btn-primary btn-sm">🎙️ Record this</span>
             </div>
           ))}
         </div>
@@ -148,15 +155,10 @@ export default function Recording({ profile }) {
               <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>{selectedPrompt.instruction}</div>
             </div>
           )}
-
           {message && <div className="alert alert-success">{message}</div>}
-
           <div className="card">
             <div className="recording-section">
-              <button
-                className={`record-btn ${status}`}
-                onClick={status === 'idle' ? startRecording : status === 'recording' ? stopRecording : discardRecording}
-              >
+              <button className={`record-btn ${status}`} onClick={status === 'idle' ? startRecording : status === 'recording' ? stopRecording : discardRecording}>
                 {status === 'idle' ? '🎙️' : status === 'recording' ? '⏹️' : '🗑️'}
               </button>
               <div className="recording-status">
@@ -188,19 +190,22 @@ export default function Recording({ profile }) {
             <div className="empty-state"><div className="empty-icon">🎙️</div><p>No recordings yet!</p></div>
           ) : submissions.map(s => (
             <div key={s.id} className="submission-card">
-              {s.prompt_title && (
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, color: 'var(--dark)' }}>📋 {s.prompt_title}</div>
-              )}
-              <div className="submission-meta">
-                {new Date(s.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                {' · '}
-                {s.status === 'pending' ? <span className="pending-badge">Awaiting feedback</span> : <span style={{ color: 'var(--success)', fontSize: 12, fontWeight: 600 }}>✓ Reviewed</span>}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                <div>
+                  {s.prompt_title && <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, color: 'var(--dark)' }}>📋 {s.prompt_title}</div>}
+                  <div className="submission-meta" style={{ marginBottom: 0 }}>
+                    {new Date(s.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    {' · '}
+                    {s.status === 'pending' ? <span className="pending-badge">Awaiting feedback</span> : <span style={{ color: 'var(--success)', fontSize: 12, fontWeight: 600 }}>✓ Reviewed</span>}
+                  </div>
+                </div>
+                <button className="btn btn-sm btn-danger" onClick={() => deleteSubmission(s.id)} disabled={deleting === s.id} style={{ marginLeft: 8, flexShrink: 0 }}>
+                  {deleting === s.id ? '...' : '🗑️'}
+                </button>
               </div>
               {s.note && <div style={{ fontSize: 14, marginBottom: 8, color: 'var(--text)' }}>📝 {s.note}</div>}
               <audio controls src={s.audio_url} style={{ width: '100%' }} />
-              {s.feedback && (
-                <div className="feedback-bubble"><strong>Teacher's feedback:</strong> {s.feedback}</div>
-              )}
+              {s.feedback && <div className="feedback-bubble"><strong>Teacher's feedback:</strong> {s.feedback}</div>}
             </div>
           ))}
         </div>
