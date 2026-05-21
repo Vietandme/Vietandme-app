@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
 const LEVELS = ['all', 'beginner', 'pre-intermediate', 'intermediate', 'upper-intermediate', 'advanced'];
+const LESSONS = Array.from({ length: 15 }, (_, i) => String(i + 1).padStart(2, '0'));
 const TYPES = ['sentence', 'question', 'topic'];
 
 export default function AdminPrompts() {
@@ -9,28 +10,34 @@ export default function AdminPrompts() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState({ title: '', instruction: '', type: 'sentence', level: 'all' });
+  const [form, setForm] = useState({ title: '', instruction: '', type: 'sentence', level: 'all', lesson: '', category: '' });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [filterLevel, setFilterLevel] = useState('all');
+  const [filterLesson, setFilterLesson] = useState('all');
+  const [search, setSearch] = useState('');
 
   const loadPrompts = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
+    if (filterLevel !== 'all') query = query.eq('level', filterLevel);
+    if (filterLesson !== 'all') query = query.eq('lesson', filterLesson);
+    const { data } = await query;
     setPrompts(data || []);
     setLoading(false);
-  }, []);
+  }, [filterLevel, filterLesson]);
 
   useEffect(() => { loadPrompts(); }, [loadPrompts]);
 
   function startNew() {
     setEditingId(null);
-    setForm({ title: '', instruction: '', type: 'sentence', level: 'all' });
+    setForm({ title: '', instruction: '', type: 'sentence', level: 'all', lesson: '', category: '' });
     setShowForm(true);
   }
 
   function startEdit(p) {
     setEditingId(p.id);
-    setForm({ title: p.title, instruction: p.instruction, type: p.type, level: p.level });
+    setForm({ title: p.title, instruction: p.instruction, type: p.type, level: p.level, lesson: p.lesson || '', category: p.category || '' });
     setShowForm(true);
   }
 
@@ -60,6 +67,11 @@ export default function AdminPrompts() {
   const typeColor = { sentence: '#E8F0FE', question: '#FEF3E2', topic: '#F0E8FE' };
   const typeText = { sentence: '#1A56DB', question: '#E67E22', topic: '#7C3AED' };
 
+  const filtered = prompts.filter(p =>
+    p.title?.toLowerCase().includes(search.toLowerCase()) ||
+    p.instruction?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -78,9 +90,9 @@ export default function AdminPrompts() {
           </div>
           <div className="form-group">
             <label>Instruction (what students see)</label>
-            <textarea value={form.instruction} onChange={e => setForm({ ...form, instruction: e.target.value })} rows={3} style={{ resize: 'none' }} placeholder="e.g. Record yourself saying: Xin chào, tôi tên là... Tôi đến từ..." />
+            <textarea value={form.instruction} onChange={e => setForm({ ...form, instruction: e.target.value })} rows={3} style={{ resize: 'none' }} placeholder="e.g. Record yourself saying: Xin chào, tôi tên là..." />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Type</label>
               <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
@@ -93,8 +105,19 @@ export default function AdminPrompts() {
                 {LEVELS.map(l => <option key={l} value={l}>{l === 'all' ? 'All levels' : l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
               </select>
             </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Lesson</label>
+              <select value={form.lesson} onChange={e => setForm({ ...form, lesson: e.target.value })}>
+                <option value="">No lesson</option>
+                {LESSONS.map(l => <option key={l} value={l}>Lesson {l}</option>)}
+              </select>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Category</label>
+              <input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="e.g. pronunciation, conversation..." />
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button className="btn btn-primary btn-sm" onClick={save} disabled={saving || !form.title || !form.instruction}>
               {saving ? 'Saving...' : '✓ Save'}
             </button>
@@ -103,13 +126,26 @@ export default function AdminPrompts() {
         </div>
       )}
 
-      {loading ? <p style={{ color: 'var(--muted)', textAlign: 'center' }}>Loading...</p>
-        : prompts.length === 0 ? (
-          <div className="empty-state">
-            <div className="empty-icon">🎙️</div>
-            <p>No prompts yet. Create one above!</p>
-          </div>
-        ) : prompts.map(p => (
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="form-group" style={{ marginBottom: 10 }}>
+          <input placeholder="🔍 Search prompts..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <select value={filterLevel} onChange={e => setFilterLevel(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '2px solid #E8E8F0', fontFamily: 'DM Sans, sans-serif', fontSize: 13, background: 'var(--cream)' }}>
+            <option value="all">All Levels</option>
+            {LEVELS.filter(l => l !== 'all').map(l => <option key={l} value={l}>{l.charAt(0).toUpperCase() + l.slice(1)}</option>)}
+          </select>
+          <select value={filterLesson} onChange={e => setFilterLesson(e.target.value)} style={{ padding: '8px 12px', borderRadius: 8, border: '2px solid #E8E8F0', fontFamily: 'DM Sans, sans-serif', fontSize: 13, background: 'var(--cream)' }}>
+            <option value="all">All Lessons</option>
+            {LESSONS.map(l => <option key={l} value={l}>Lesson {l}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {loading ? <p style={{ textAlign: 'center', color: 'var(--muted)' }}>Loading...</p>
+        : filtered.length === 0 ? (
+          <div className="empty-state"><div className="empty-icon">🎙️</div><p>No prompts found.</p></div>
+        ) : filtered.map(p => (
           <div key={p.id} className="card" style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
@@ -118,6 +154,8 @@ export default function AdminPrompts() {
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 11, background: typeColor[p.type], color: typeText[p.type], padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{typeLabel[p.type]}</span>
                   <span style={{ fontSize: 11, background: '#FDEAEA', color: 'var(--red)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{p.level === 'all' ? 'All levels' : p.level}</span>
+                  {p.lesson && <span style={{ fontSize: 11, background: '#E8E8F0', color: 'var(--muted)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>Lesson {p.lesson}</span>}
+                  {p.category && <span style={{ fontSize: 11, background: '#E8E8F0', color: 'var(--muted)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{p.category}</span>}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>

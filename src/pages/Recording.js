@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
 
+const LEVELS = ['all', 'beginner', 'pre-intermediate', 'intermediate', 'upper-intermediate', 'advanced'];
+const LESSONS = ['all', ...Array.from({ length: 15 }, (_, i) => String(i + 1).padStart(2, '0'))];
+
 export default function Recording({ profile }) {
   const [status, setStatus] = useState('idle');
   const [note, setNote] = useState('');
@@ -8,11 +11,16 @@ export default function Recording({ profile }) {
   const [audioUrl, setAudioUrl] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [prompts, setPrompts] = useState([]);
+  const [allPrompts, setAllPrompts] = useState([]);
   const [selectedPrompt, setSelectedPrompt] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [view, setView] = useState('prompts');
   const [deleting, setDeleting] = useState(null);
+  const [filterLevel, setFilterLevel] = useState('all');
+  const [filterLesson, setFilterLesson] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [categories, setCategories] = useState([]);
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
 
@@ -24,13 +32,23 @@ export default function Recording({ profile }) {
 
   useEffect(() => {
     loadSubmissions();
-    loadPrompts();
+    loadAllPrompts();
   }, [loadSubmissions]);
 
-  async function loadPrompts() {
+  async function loadAllPrompts() {
     const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
-    setPrompts(data || []);
+    setAllPrompts(data || []);
+    const cats = ['all', ...new Set((data || []).map(p => p.category).filter(Boolean).sort())];
+    setCategories(cats);
   }
+
+  useEffect(() => {
+    let filtered = allPrompts;
+    if (filterLevel !== 'all') filtered = filtered.filter(p => p.level === filterLevel || p.level === 'all');
+    if (filterLesson !== 'all') filtered = filtered.filter(p => p.lesson === filterLesson);
+    if (filterCategory !== 'all') filtered = filtered.filter(p => p.category === filterCategory);
+    setPrompts(filtered);
+  }, [allPrompts, filterLevel, filterLesson, filterCategory]);
 
   function selectPrompt(prompt) {
     setSelectedPrompt(prompt);
@@ -125,9 +143,61 @@ export default function Recording({ profile }) {
 
       {view === 'prompts' && (
         <div>
-          <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 16 }}>Choose a prompt to record:</p>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Level</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {LEVELS.map(l => (
+                <button key={l} onClick={() => { setFilterLevel(l); setFilterLesson('all'); }} style={{
+                  fontSize: 12, padding: '4px 12px', borderRadius: 20, fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+                  border: '2px solid ' + (filterLevel === l ? 'var(--red)' : '#E8E8F0'),
+                  background: filterLevel === l ? 'var(--red)' : 'var(--white)',
+                  color: filterLevel === l ? 'white' : 'var(--text)',
+                }}>
+                  {l === 'all' ? 'All' : l.charAt(0).toUpperCase() + l.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Lesson</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {LESSONS.map(ls => (
+                <button key={ls} onClick={() => setFilterLesson(ls)} style={{
+                  fontSize: 12, padding: '4px 10px', minWidth: 40, borderRadius: 20,
+                  fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+                  border: '2px solid ' + (filterLesson === ls ? 'var(--red)' : '#E8E8F0'),
+                  background: filterLesson === ls ? 'var(--red)' : 'var(--white)',
+                  color: filterLesson === ls ? 'white' : 'var(--text)',
+                }}>
+                  {ls === 'all' ? 'All' : ls}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {categories.length > 1 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Category</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {categories.map(c => (
+                  <button key={c} onClick={() => setFilterCategory(c)} style={{
+                    fontSize: 12, padding: '4px 12px', borderRadius: 20, fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+                    border: '2px solid ' + (filterCategory === c ? 'var(--gold)' : '#E8E8F0'),
+                    background: filterCategory === c ? 'var(--gold)' : 'var(--white)',
+                    color: filterCategory === c ? 'var(--dark)' : 'var(--text)',
+                  }}>
+                    {c === 'all' ? 'All' : c.charAt(0).toUpperCase() + c.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 12 }}>{prompts.length} prompt{prompts.length !== 1 ? 's' : ''} — tap one to record:</p>
+
           {prompts.length === 0 ? (
-            <div className="empty-state"><div className="empty-icon">🎙️</div><p>No prompts yet. Your teacher will add them soon!</p></div>
+            <div className="empty-state"><div className="empty-icon">🎙️</div><p>No prompts for this selection.</p></div>
           ) : prompts.map(p => (
             <div key={p.id} className="card" style={{ marginBottom: 12, cursor: 'pointer', border: '2px solid transparent', transition: 'border-color 0.2s' }}
               onClick={() => selectPrompt(p)}
@@ -139,6 +209,8 @@ export default function Recording({ profile }) {
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                 <span style={{ fontSize: 11, background: typeColor[p.type], color: typeText[p.type], padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{typeLabel[p.type]}</span>
                 {p.level !== 'all' && <span style={{ fontSize: 11, background: '#FDEAEA', color: 'var(--red)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{p.level}</span>}
+                {p.lesson && <span style={{ fontSize: 11, background: '#E8E8F0', color: 'var(--muted)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>Lesson {p.lesson}</span>}
+                {p.category && <span style={{ fontSize: 11, background: '#E8E8F0', color: 'var(--muted)', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{p.category}</span>}
               </div>
               <span className="btn btn-primary btn-sm">🎙️ Record this</span>
             </div>
