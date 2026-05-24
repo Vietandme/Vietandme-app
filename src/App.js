@@ -7,7 +7,7 @@ import StudentDashboard from './pages/StudentDashboard';
 import Flashcards from './pages/Flashcards';
 import Quiz from './pages/Quiz';
 import Recording from './pages/Recording';
-import Progress from './pages/Progress';
+import StudentQuestions from './pages/StudentQuestions';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminFeedback from './pages/AdminFeedback';
 import AdminUpload from './pages/AdminUpload';
@@ -15,6 +15,7 @@ import AdminStudents from './pages/AdminStudents';
 import AdminContent from './pages/AdminContent';
 import AdminQuiz from './pages/AdminQuiz';
 import AdminPrompts from './pages/AdminPrompts';
+import AdminQuestions from './pages/AdminQuestions';
 import Layout from './components/Layout';
 import './App.css';
 
@@ -68,6 +69,7 @@ export default function App() {
                 <Route path="/admin/content" element={<AdminContent />} />
                 <Route path="/admin/quiz" element={<AdminQuiz />} />
                 <Route path="/admin/prompts" element={<AdminPrompts />} />
+                <Route path="/admin/questions" element={<AdminQuestions />} />
               </>
             ) : (
               <>
@@ -75,7 +77,7 @@ export default function App() {
                 <Route path="/flashcards/:level?" element={<Flashcards />} />
                 <Route path="/quiz/:level?" element={<Quiz />} />
                 <Route path="/recording" element={<Recording profile={profile} />} />
-                <Route path="/progress" element={<Progress profile={profile} />} />
+                <Route path="/questions" element={<StudentQuestions profile={profile} />} />
               </>
             )}
           </Route>

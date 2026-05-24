@@ -12,12 +12,13 @@ export default function Layout({ profile }) {
     { path: '/flashcards', icon: '📇', label: 'Flashcards' },
     { path: '/quiz', icon: '✏️', label: 'Quiz' },
     { path: '/recording', icon: '🎙️', label: 'Record' },
-    
+    { path: '/questions', icon: '❓', label: 'Questions' },
   ];
 
   const adminNav = [
     { path: '/', icon: '🏠', label: 'Home' },
     { path: '/admin/feedback', icon: '🎙️', label: 'Feedback' },
+    { path: '/admin/questions', icon: '❓', label: 'Questions' },
     { path: '/admin/prompts', icon: '📋', label: 'Prompts' },
     { path: '/admin/content', icon: '📇', label: 'Cards' },
     { path: '/admin/quiz', icon: '✏️', label: 'Quiz' },
