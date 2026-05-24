@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
@@ -7,21 +7,15 @@ export default function StudentDashboard({ profile }) {
   const [newFeedbacks, setNewFeedbacks] = useState([]);
   const [markingRead, setMarkingRead] = useState(null);
 
-  useEffect(() => {
-    if (!profile) return;
-    loadStats();
-    loadNewFeedbacks();
-  }, [profile]);
-
-  async function loadStats() {
+  const loadStats = useCallback(async () => {
     const [q, r] = await Promise.all([
       supabase.from('quiz_results').select('id', { count: 'exact' }).eq('user_id', profile.id),
       supabase.from('recordings').select('id', { count: 'exact' }).eq('user_id', profile.id),
     ]);
     setStats({ quizzes: q.count || 0, recordings: r.count || 0 });
-  }
+  }, [profile]);
 
-  async function loadNewFeedbacks() {
+  const loadNewFeedbacks = useCallback(async () => {
     const { data } = await supabase
       .from('recordings')
       .select('*')
@@ -30,7 +24,13 @@ export default function StudentDashboard({ profile }) {
       .is('read_at', null)
       .order('created_at', { ascending: false });
     setNewFeedbacks(data || []);
-  }
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    loadStats();
+    loadNewFeedbacks();
+  }, [profile, loadStats, loadNewFeedbacks]);
 
   async function markAsRead(id) {
     setMarkingRead(id);
@@ -60,7 +60,6 @@ export default function StudentDashboard({ profile }) {
         </p>
       </div>
 
-      {/* New feedback notifications */}
       {newFeedbacks.length > 0 && (
         <div className="card" style={{ marginBottom: 16, border: '2px solid var(--gold)', background: '#FFFBEA' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -79,28 +78,19 @@ export default function StudentDashboard({ profile }) {
           </div>
           {newFeedbacks.map(f => (
             <div key={f.id} style={{
-              background: 'var(--white)', borderRadius: 10, padding: '12px 14px', marginBottom: 8,
-              border: '1px solid #E8E8F0',
+              background: 'var(--white)', borderRadius: 10, padding: '12px 14px', marginBottom: 8, border: '1px solid #E8E8F0',
             }}>
-              {f.prompt_title && (
-                <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginBottom: 4 }}>📋 {f.prompt_title}</div>
-              )}
-              <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 8, fontStyle: 'italic' }}>
-                "{f.feedback}"
-              </div>
+              {f.prompt_title && <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginBottom: 4 }}>📋 {f.prompt_title}</div>}
+              <div style={{ fontSize: 14, color: 'var(--text)', marginBottom: 8, fontStyle: 'italic' }}>"{f.feedback}"</div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
                   {new Date(f.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
                 </span>
-                <button
-                  onClick={() => markAsRead(f.id)}
-                  disabled={markingRead === f.id}
-                  style={{
-                    fontSize: 12, padding: '4px 12px', borderRadius: 8, border: 'none',
-                    background: 'var(--success)', color: 'white', cursor: 'pointer',
-                    fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-                  }}
-                >
+                <button onClick={() => markAsRead(f.id)} disabled={markingRead === f.id} style={{
+                  fontSize: 12, padding: '4px 12px', borderRadius: 8, border: 'none',
+                  background: 'var(--success)', color: 'white', cursor: 'pointer',
+                  fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                }}>
                   {markingRead === f.id ? '...' : '✓ Got it'}
                 </button>
               </div>
