@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 const LEVELS = ['all', 'beginner', 'pre-intermediate', 'intermediate', 'upper-intermediate', 'advanced'];
 const LESSONS = ['all', ...Array.from({ length: 15 }, (_, i) => String(i + 1).padStart(2, '0'))];
@@ -21,8 +22,12 @@ export default function Recording({ profile }) {
   const [filterLesson, setFilterLesson] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
   const [categories, setCategories] = useState([]);
+  const [completions, setCompletions] = useState([]);
+  const [userId, setUserId] = useState(null);
+  const [marking, setMarking] = useState(false);
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
+  const navigate = useNavigate();
 
   const loadSubmissions = useCallback(async () => {
     if (!profile) return;
@@ -30,10 +35,20 @@ export default function Recording({ profile }) {
     setSubmissions(data || []);
   }, [profile]);
 
+  const loadCompletions = useCallback(async (uid) => {
+    if (!uid) return;
+    const { data } = await supabase.from('lesson_completions').select('*').eq('user_id', uid).eq('type', 'recording');
+    setCompletions(data || []);
+  }, []);
+
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id);
+      loadCompletions(data.user?.id);
+    });
     loadSubmissions();
     loadAllPrompts();
-  }, [loadSubmissions]);
+  }, [loadSubmissions, loadCompletions]);
 
   async function loadAllPrompts() {
     const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
@@ -49,6 +64,29 @@ export default function Recording({ profile }) {
     if (filterCategory !== 'all') filtered = filtered.filter(p => p.category === filterCategory);
     setPrompts(filtered);
   }, [allPrompts, filterLevel, filterLesson, filterCategory]);
+
+  function isCompleted(lvl, ls) {
+    return completions.some(c => c.level === lvl && c.lesson === ls);
+  }
+
+  async function markCompleted() {
+    if (!userId || filterLevel === 'all' || filterLesson === 'all') return;
+    setMarking(true);
+    await supabase.from('lesson_completions').upsert({
+      user_id: userId, level: filterLevel, lesson: filterLesson, type: 'recording'
+    }, { onConflict: 'user_id,level,lesson,type' });
+    setMarking(false);
+    navigate('/');
+  }
+
+  async function markIncomplete() {
+    if (!userId || filterLevel === 'all' || filterLesson === 'all') return;
+    setMarking(true);
+    await supabase.from('lesson_completions').delete()
+      .eq('user_id', userId).eq('level', filterLevel).eq('lesson', filterLesson).eq('type', 'recording');
+    setMarking(false);
+    navigate('/');
+  }
 
   function selectPrompt(prompt) {
     setSelectedPrompt(prompt);
@@ -124,6 +162,13 @@ export default function Recording({ profile }) {
   const typeColor = { sentence: '#E8F0FE', question: '#FEF3E2', topic: '#F0E8FE' };
   const typeText = { sentence: '#1A56DB', question: '#E67E22', topic: '#7C3AED' };
 
+  const currentlyDone = filterLevel !== 'all' && filterLesson !== 'all' && isCompleted(filterLevel, filterLesson);
+  const hasReviewedAll = filterLevel !== 'all' && filterLesson !== 'all' &&
+    submissions.filter(s => {
+      const prompt = allPrompts.find(p => p.id === s.prompt_id);
+      return prompt?.lesson === filterLesson;
+    }).every(s => s.status === 'reviewed');
+
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Pronunciation 🎙️</h1>
@@ -162,22 +207,26 @@ export default function Recording({ profile }) {
           <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Lesson</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {LESSONS.map(ls => (
-                <button key={ls} onClick={() => setFilterLesson(ls)} style={{
-                  fontSize: 12, padding: '4px 10px', minWidth: 40, borderRadius: 20,
-                  fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
-                  border: '2px solid ' + (filterLesson === ls ? 'var(--red)' : '#E8E8F0'),
-                  background: filterLesson === ls ? 'var(--red)' : 'var(--white)',
-                  color: filterLesson === ls ? 'white' : 'var(--text)',
-                }}>
-                  {ls === 'all' ? 'All' : ls}
-                </button>
-              ))}
+              {LESSONS.map(ls => {
+                const done = ls !== 'all' && filterLevel !== 'all' && isCompleted(filterLevel, ls);
+                const active = filterLesson === ls;
+                return (
+                  <button key={ls} onClick={() => setFilterLesson(ls)} style={{
+                    fontSize: 12, padding: '4px 10px', minWidth: 40, borderRadius: 20,
+                    fontFamily: 'DM Sans, sans-serif', fontWeight: 600, cursor: 'pointer',
+                    border: '2px solid ' + (active ? (done ? '#27AE60' : 'var(--red)') : done ? '#27AE60' : '#E8E8F0'),
+                    background: active ? (done ? '#27AE60' : 'var(--red)') : done ? '#E8F8EF' : 'var(--white)',
+                    color: active ? 'white' : done ? '#27AE60' : 'var(--text)',
+                  }}>
+                    {ls === 'all' ? 'All' : ls}{done ? ' ✓' : ''}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {categories.length > 1 && (
-            <div style={{ marginBottom: 16 }}>
+            <div style={{ marginBottom: 8 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Category</div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {categories.map(c => (
@@ -194,7 +243,7 @@ export default function Recording({ profile }) {
             </div>
           )}
 
-          <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 12 }}>{prompts.length} prompt{prompts.length !== 1 ? 's' : ''} — tap one to record:</p>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 12, marginTop: 8 }}>{prompts.length} prompt{prompts.length !== 1 ? 's' : ''} — tap one to record:</p>
 
           {prompts.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">🎙️</div><p>No prompts for this selection.</p></div>
@@ -215,6 +264,32 @@ export default function Recording({ profile }) {
               <span className="btn btn-primary btn-sm">🎙️ Record this</span>
             </div>
           ))}
+
+          {filterLevel !== 'all' && filterLesson !== 'all' && (
+            <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', marginBottom: 4 }}>
+                {hasReviewedAll && submissions.length > 0 ? '✅ All your recordings for this lesson have been reviewed!' : 'Mark this lesson once you\'ve reviewed all feedback:'}
+              </div>
+              <button onClick={markCompleted} disabled={marking} style={{
+                width: '100%', padding: '14px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s',
+                fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 600,
+                border: '2px solid ' + (currentlyDone ? '#27AE60' : '#E8E8F0'),
+                background: currentlyDone ? '#27AE60' : 'var(--white)',
+                color: currentlyDone ? 'white' : 'var(--muted)',
+              }}>
+                {currentlyDone ? '✓ Lesson Completed!' : '🎉 Mark Lesson as Completed'}
+              </button>
+              <button onClick={markIncomplete} disabled={marking} style={{
+                width: '100%', padding: '14px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s',
+                fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 600,
+                border: '2px solid ' + (!currentlyDone ? 'var(--red)' : '#E8E8F0'),
+                background: !currentlyDone ? '#FFF0F0' : 'var(--white)',
+                color: !currentlyDone ? 'var(--red)' : 'var(--muted)',
+              }}>
+                ↩️ Mark as Incomplete — I want to do it again
+              </button>
+            </div>
+          )}
         </div>
       )}
 
