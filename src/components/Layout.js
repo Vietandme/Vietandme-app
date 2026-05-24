@@ -12,7 +12,7 @@ export default function Layout({ profile }) {
     { path: '/flashcards', icon: '📇', label: 'Flashcards' },
     { path: '/quiz', icon: '✏️', label: 'Quiz' },
     { path: '/recording', icon: '🎙️', label: 'Record' },
-    { path: '/progress', icon: '📊', label: 'Progress' },
+    
   ];
 
   const adminNav = [
