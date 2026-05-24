@@ -127,6 +127,11 @@ export default function StudentDashboard({ profile }) {
           <span className="label">Record</span>
           <span className="sub">Get feedback</span>
         </Link>
+        <Link to="/questions" className="menu-card">
+          <span className="icon">❓</span>
+          <span className="label">Questions</span>
+          <span className="sub">Ask Vi anything</span>
+        </Link>
       </div>
     </div>
   );
