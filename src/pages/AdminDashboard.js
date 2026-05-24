@@ -2,25 +2,29 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ students: 0, pending: 0, questions: 0, flashcards: 0 });
+  const [stats, setStats] = useState({ students: 0, pendingRecordings: 0, pendingQuestions: 0, questions: 0, flashcards: 0 });
 
   useEffect(() => {
     async function load() {
-      const [students, pending, questions, flashcards] = await Promise.all([
+      const [students, pendingRec, pendingQ, questions, flashcards] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact' }).eq('role', 'student'),
         supabase.from('recordings').select('id', { count: 'exact' }).eq('status', 'pending'),
+        supabase.from('student_questions').select('id', { count: 'exact' }).eq('status', 'pending'),
         supabase.from('quiz_questions').select('id', { count: 'exact' }),
         supabase.from('flashcards').select('id', { count: 'exact' }),
       ]);
       setStats({
         students: students.count || 0,
-        pending: pending.count || 0,
+        pendingRecordings: pendingRec.count || 0,
+        pendingQuestions: pendingQ.count || 0,
         questions: questions.count || 0,
         flashcards: flashcards.count || 0,
       });
     }
     load();
   }, []);
+
+  const totalPending = stats.pendingRecordings + stats.pendingQuestions;
 
   return (
     <div>
@@ -33,7 +37,7 @@ export default function AdminDashboard() {
           <div className="label">Students</div>
         </div>
         <div className="card admin-stat">
-          <div className="num" style={{ color: stats.pending > 0 ? 'var(--gold)' : 'var(--red)' }}>{stats.pending}</div>
+          <div className="num" style={{ color: totalPending > 0 ? 'var(--gold)' : 'var(--red)' }}>{totalPending}</div>
           <div className="label">Pending</div>
         </div>
         <div className="card admin-stat">
@@ -42,12 +46,34 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="card" style={{ textAlign: 'center', background: 'var(--dark)', color: 'var(--white)' }}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>🎙️</div>
-        <h3 style={{ color: 'var(--gold)', marginBottom: 4 }}>{stats.pending} recording{stats.pending !== 1 ? 's' : ''} waiting</h3>
-        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, marginBottom: 16 }}>Your students are waiting for pronunciation feedback</p>
-        <a href="/admin/feedback" className="btn btn-gold">Give Feedback</a>
-      </div>
+      {totalPending > 0 && (
+        <div className="card" style={{ background: 'var(--dark)', color: 'var(--white)', marginBottom: 16 }}>
+          <div style={{ fontSize: 28, marginBottom: 8, textAlign: 'center' }}>🔔</div>
+          <h3 style={{ color: 'var(--gold)', marginBottom: 8, textAlign: 'center' }}>
+            {totalPending} item{totalPending !== 1 ? 's' : ''} waiting
+          </h3>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+            {stats.pendingRecordings > 0 && (
+              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
+                🎙️ {stats.pendingRecordings} recording{stats.pendingRecordings !== 1 ? 's' : ''}
+              </div>
+            )}
+            {stats.pendingQuestions > 0 && (
+              <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
+                ❓ {stats.pendingQuestions} question{stats.pendingQuestions !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+            {stats.pendingRecordings > 0 && (
+              <a href="/admin/feedback" className="btn btn-gold btn-sm">Give Feedback</a>
+            )}
+            {stats.pendingQuestions > 0 && (
+              <a href="/admin/questions" className="btn btn-secondary btn-sm">Answer Questions</a>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h3 className="card-title">Quick Stats</h3>
