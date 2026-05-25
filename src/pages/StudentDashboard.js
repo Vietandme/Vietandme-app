@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 export default function StudentDashboard({ profile }) {
   const [stats, setStats] = useState({ quizzes: 0, recordings: 0 });
   const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
   const [unreadAnswers, setUnreadAnswers] = useState(0);
+  const navigate = useNavigate();
 
   const loadStats = useCallback(async () => {
     const [q, r] = await Promise.all([
@@ -30,59 +31,77 @@ export default function StudentDashboard({ profile }) {
     loadUnread();
   }, [profile, loadStats, loadUnread]);
 
+  const totalPending = unreadFeedbacks + unreadAnswers;
+
   const levelClass = {
     beginner: 'level-beginner',
     intermediate: 'level-intermediate',
     advanced: 'level-advanced',
   }[profile?.level] || 'level-beginner';
 
+  function handlePendingClick() {
+    if (unreadFeedbacks > 0) navigate('/recording?tab=submissions');
+    else if (unreadAnswers > 0) navigate('/questions?tab=submissions');
+  }
+
   return (
     <div>
       <div className="dashboard-welcome">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <h1>Chào {profile?.full_name?.split(' ')[0] || 'bạn'} 👋</h1>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-            {unreadFeedbacks > 0 && (
-              <Link to="/recording?tab=submissions" style={{ textDecoration: 'none' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  background: 'var(--gold)', borderRadius: 20, padding: '5px 12px',
-                  fontWeight: 700, fontSize: 12, color: 'var(--dark)',
-                }}>
-                  🔔 {unreadFeedbacks} new feedback{unreadFeedbacks !== 1 ? 's' : ''}
-                </div>
-              </Link>
-            )}
-            {unreadAnswers > 0 && (
-              <Link to="/questions?tab=submissions" style={{ textDecoration: 'none' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  background: '#E8F0FE', borderRadius: 20, padding: '5px 12px',
-                  fontWeight: 700, fontSize: 12, color: '#1A56DB',
-                }}>
-                  💬 {unreadAnswers} new answer{unreadAnswers !== 1 ? 's' : ''}
-                </div>
-              </Link>
-            )}
-          </div>
-        </div>
+        <h1>Chào {profile?.full_name?.split(' ')[0] || 'bạn'} 👋</h1>
         <p style={{ marginTop: 8 }}>
           <span className={`level-badge ${levelClass}`}>{profile?.level || 'beginner'}</span>
         </p>
       </div>
 
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-around', padding: '16px 8px' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 28, fontFamily: 'Playfair Display, serif', color: 'var(--red)', fontWeight: 700 }}>{stats.quizzes}</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Quizzes done</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
+        <div className="card admin-stat" style={{ margin: 0 }}>
+          <div className="num">{stats.quizzes}</div>
+          <div className="label">Quizzes</div>
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 28, fontFamily: 'Playfair Display, serif', color: 'var(--red)', fontWeight: 700 }}>{stats.recordings}</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Recordings sent</div>
+        <div
+          className="card admin-stat"
+          style={{ margin: 0, cursor: totalPending > 0 ? 'pointer' : 'default' }}
+          onClick={totalPending > 0 ? handlePendingClick : undefined}
+        >
+          <div className="num" style={{ color: totalPending > 0 ? 'var(--gold)' : 'var(--red)' }}>{totalPending}</div>
+          <div className="label">Pending</div>
+        </div>
+        <div className="card admin-stat" style={{ margin: 0 }}>
+          <div className="num">{stats.recordings}</div>
+          <div className="label">Recordings</div>
         </div>
       </div>
 
-      <h2 style={{ fontSize: 18, marginBottom: 12, marginTop: 8 }}>What do you want to practice?</h2>
+      {totalPending > 0 && (
+        <div className="card" style={{ background: 'var(--dark)', color: 'var(--white)', marginBottom: 16 }}>
+          <div style={{ fontSize: 24, textAlign: 'center', marginBottom: 8 }}>🔔</div>
+          <h3 style={{ color: 'var(--gold)', textAlign: 'center', marginBottom: 8 }}>
+            {totalPending} new item{totalPending !== 1 ? 's' : ''} waiting!
+          </h3>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+            {unreadFeedbacks > 0 && (
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
+                🎙️ {unreadFeedbacks} new feedback{unreadFeedbacks !== 1 ? 's' : ''}
+              </div>
+            )}
+            {unreadAnswers > 0 && (
+              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
+                💬 {unreadAnswers} new answer{unreadAnswers !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+            {unreadFeedbacks > 0 && (
+              <Link to="/recording?tab=submissions" className="btn btn-gold btn-sm">View Feedbacks</Link>
+            )}
+            {unreadAnswers > 0 && (
+              <Link to="/questions?tab=submissions" className="btn btn-secondary btn-sm">View Answers</Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      <h2 style={{ fontSize: 18, marginBottom: 12 }}>What do you want to practice?</h2>
       <div className="menu-grid">
         <Link to="/flashcards" className="menu-card">
           <span className="icon">📇</span>
