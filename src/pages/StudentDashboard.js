@@ -42,7 +42,7 @@ export default function StudentDashboard({ profile }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <h1>Chào {profile?.full_name?.split(' ')[0] || 'bạn'} 👋</h1>
           {unreadCount > 0 && (
-            <Link to="/recording" style={{ textDecoration: 'none' }}>
+            <Link to="/recording?tab=submissions" style={{ textDecoration: 'none' }}>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 background: 'var(--gold)', borderRadius: 20, padding: '6px 12px',
