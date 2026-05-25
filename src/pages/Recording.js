@@ -1,11 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const LEVELS = ['all', 'beginner', 'pre-intermediate', 'intermediate', 'upper-intermediate', 'advanced'];
 const LESSONS = ['all', ...Array.from({ length: 15 }, (_, i) => String(i + 1).padStart(2, '0'))];
 
 export default function Recording({ profile }) {
+  const location = useLocation();
+  const initialTab = new URLSearchParams(location.search).get('tab') || 'prompts';
+
   const [status, setStatus] = useState('idle');
   const [note, setNote] = useState('');
   const [audioBlob, setAudioBlob] = useState(null);
@@ -16,7 +19,7 @@ export default function Recording({ profile }) {
   const [selectedPrompt, setSelectedPrompt] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
-  const [view, setView] = useState('prompts');
+  const [view, setView] = useState(initialTab);
   const [deleting, setDeleting] = useState(null);
   const [filterLevel, setFilterLevel] = useState('all');
   const [filterLesson, setFilterLesson] = useState('all');
@@ -158,16 +161,17 @@ export default function Recording({ profile }) {
     loadSubmissions();
   }
 
+  async function markFeedbackRead(id) {
+    await supabase.from('recordings').update({ read_at: new Date().toISOString() }).eq('id', id);
+    loadSubmissions();
+  }
+
   const typeLabel = { sentence: '📖 Read aloud', question: '❓ Answer question', topic: '🎤 Speak freely' };
   const typeColor = { sentence: '#E8F0FE', question: '#FEF3E2', topic: '#F0E8FE' };
   const typeText = { sentence: '#1A56DB', question: '#E67E22', topic: '#7C3AED' };
-
   const currentlyDone = filterLevel !== 'all' && filterLesson !== 'all' && isCompleted(filterLevel, filterLesson);
-  const hasReviewedAll = filterLevel !== 'all' && filterLesson !== 'all' &&
-    submissions.filter(s => {
-      const prompt = allPrompts.find(p => p.id === s.prompt_id);
-      return prompt?.lesson === filterLesson;
-    }).every(s => s.status === 'reviewed');
+
+  const newFeedbacks = submissions.filter(s => s.status === 'reviewed' && !s.read_at);
 
   return (
     <div>
@@ -180,8 +184,22 @@ export default function Recording({ profile }) {
             fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 600, transition: 'all 0.2s',
             background: view === v ? 'var(--red)' : 'transparent',
             color: view === v ? 'white' : 'var(--muted)',
+            position: 'relative',
           }}>
-            {v === 'prompts' ? '📋 Prompts' : v === 'record' ? '🎙️ Record' : '📬 My Submissions'}
+            {v === 'prompts' ? '📋 Prompts' : v === 'record' ? '🎙️ Record' : (
+              <span style={{ position: 'relative' }}>
+                📬 My Submissions
+                {newFeedbacks.length > 0 && (
+                  <span style={{
+                    position: 'absolute', top: -8, right: -10,
+                    background: 'var(--gold)', color: 'var(--dark)',
+                    borderRadius: '50%', width: 16, height: 16,
+                    fontSize: 10, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{newFeedbacks.length}</span>
+                )}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -267,9 +285,6 @@ export default function Recording({ profile }) {
 
           {filterLevel !== 'all' && filterLesson !== 'all' && (
             <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'center', marginBottom: 4 }}>
-                {hasReviewedAll && submissions.length > 0 ? '✅ All your recordings for this lesson have been reviewed!' : 'Mark this lesson once you\'ve reviewed all feedback:'}
-              </div>
               <button onClick={markCompleted} disabled={marking} style={{
                 width: '100%', padding: '14px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s',
                 fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 600,
@@ -333,10 +348,15 @@ export default function Recording({ profile }) {
 
       {view === 'submissions' && (
         <div>
+          {newFeedbacks.length > 0 && (
+            <div style={{ background: '#FFFBEA', border: '2px solid var(--gold)', borderRadius: 12, padding: '10px 14px', marginBottom: 16, fontSize: 14, fontWeight: 600, color: 'var(--dark)' }}>
+              🔔 You have {newFeedbacks.length} new feedback{newFeedbacks.length !== 1 ? 's' : ''} below!
+            </div>
+          )}
           {submissions.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">🎙️</div><p>No recordings yet!</p></div>
           ) : submissions.map(s => (
-            <div key={s.id} className="submission-card">
+            <div key={s.id} className="submission-card" style={{ border: s.status === 'reviewed' && !s.read_at ? '2px solid var(--gold)' : '1px solid transparent' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                 <div>
                   {s.prompt_title && <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, color: 'var(--dark)' }}>📋 {s.prompt_title}</div>}
@@ -352,7 +372,18 @@ export default function Recording({ profile }) {
               </div>
               {s.note && <div style={{ fontSize: 14, marginBottom: 8, color: 'var(--text)' }}>📝 {s.note}</div>}
               <audio controls src={s.audio_url} style={{ width: '100%' }} />
-              {s.feedback && <div className="feedback-bubble"><strong>Teacher's feedback:</strong> {s.feedback}</div>}
+              {s.feedback && (
+                <div className="feedback-bubble">
+                  <strong>Teacher's feedback:</strong> {s.feedback}
+                  {!s.read_at && (
+                    <button onClick={() => markFeedbackRead(s.id)} style={{
+                      display: 'block', marginTop: 8, fontSize: 12, padding: '4px 12px',
+                      borderRadius: 8, border: 'none', background: 'var(--success)', color: 'white',
+                      cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
+                    }}>✓ Got it</button>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
