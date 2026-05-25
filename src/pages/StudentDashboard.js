@@ -4,7 +4,8 @@ import { supabase } from '../supabaseClient';
 
 export default function StudentDashboard({ profile }) {
   const [stats, setStats] = useState({ quizzes: 0, recordings: 0 });
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
+  const [unreadAnswers, setUnreadAnswers] = useState(0);
 
   const loadStats = useCallback(async () => {
     const [q, r] = await Promise.all([
@@ -15,13 +16,12 @@ export default function StudentDashboard({ profile }) {
   }, [profile]);
 
   const loadUnread = useCallback(async () => {
-    const { count } = await supabase
-      .from('recordings')
-      .select('id', { count: 'exact' })
-      .eq('user_id', profile.id)
-      .eq('status', 'reviewed')
-      .is('read_at', null);
-    setUnreadCount(count || 0);
+    const [f, a] = await Promise.all([
+      supabase.from('recordings').select('id', { count: 'exact' }).eq('user_id', profile.id).eq('status', 'reviewed').is('read_at', null),
+      supabase.from('student_questions').select('id', { count: 'exact' }).eq('user_id', profile.id).eq('status', 'answered').is('read_at', null),
+    ]);
+    setUnreadFeedbacks(f.count || 0);
+    setUnreadAnswers(a.count || 0);
   }, [profile]);
 
   useEffect(() => {
@@ -41,17 +41,30 @@ export default function StudentDashboard({ profile }) {
       <div className="dashboard-welcome">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <h1>Chào {profile?.full_name?.split(' ')[0] || 'bạn'} 👋</h1>
-          {unreadCount > 0 && (
-            <Link to="/recording?tab=submissions" style={{ textDecoration: 'none' }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                background: 'var(--gold)', borderRadius: 20, padding: '6px 12px',
-                fontWeight: 700, fontSize: 13, color: 'var(--dark)',
-              }}>
-                🔔 {unreadCount} new feedback{unreadCount !== 1 ? 's' : ''}
-              </div>
-            </Link>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+            {unreadFeedbacks > 0 && (
+              <Link to="/recording?tab=submissions" style={{ textDecoration: 'none' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: 'var(--gold)', borderRadius: 20, padding: '5px 12px',
+                  fontWeight: 700, fontSize: 12, color: 'var(--dark)',
+                }}>
+                  🔔 {unreadFeedbacks} new feedback{unreadFeedbacks !== 1 ? 's' : ''}
+                </div>
+              </Link>
+            )}
+            {unreadAnswers > 0 && (
+              <Link to="/questions?tab=submissions" style={{ textDecoration: 'none' }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: '#E8F0FE', borderRadius: 20, padding: '5px 12px',
+                  fontWeight: 700, fontSize: 12, color: '#1A56DB',
+                }}>
+                  💬 {unreadAnswers} new answer{unreadAnswers !== 1 ? 's' : ''}
+                </div>
+              </Link>
+            )}
+          </div>
         </div>
         <p style={{ marginTop: 8 }}>
           <span className={`level-badge ${levelClass}`}>{profile?.level || 'beginner'}</span>
