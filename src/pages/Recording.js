@@ -28,6 +28,7 @@ export default function Recording({ profile }) {
   const [completions, setCompletions] = useState([]);
   const [userId, setUserId] = useState(null);
   const [marking, setMarking] = useState(false);
+  const [newFeedbackCount, setNewFeedbackCount] = useState(0);
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
   const navigate = useNavigate();
@@ -36,6 +37,8 @@ export default function Recording({ profile }) {
     if (!profile) return;
     const { data } = await supabase.from('recordings').select('*').eq('user_id', profile.id).order('created_at', { ascending: false });
     setSubmissions(data || []);
+    const unread = (data || []).filter(s => s.status === 'reviewed' && !s.read_at).length;
+    setNewFeedbackCount(unread);
   }, [profile]);
 
   const loadCompletions = useCallback(async (uid) => {
@@ -52,6 +55,21 @@ export default function Recording({ profile }) {
     loadSubmissions();
     loadAllPrompts();
   }, [loadSubmissions, loadCompletions]);
+
+  // Auto mark all as read when submissions tab is opened
+  useEffect(() => {
+    if (view === 'submissions' && profile) {
+      supabase.from('recordings')
+        .update({ read_at: new Date().toISOString() })
+        .eq('user_id', profile.id)
+        .eq('status', 'reviewed')
+        .is('read_at', null)
+        .then(() => {
+          setNewFeedbackCount(0);
+          loadSubmissions();
+        });
+    }
+  }, [view, profile, loadSubmissions]);
 
   async function loadAllPrompts() {
     const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
@@ -161,17 +179,10 @@ export default function Recording({ profile }) {
     loadSubmissions();
   }
 
-  async function markFeedbackRead(id) {
-    await supabase.from('recordings').update({ read_at: new Date().toISOString() }).eq('id', id);
-    loadSubmissions();
-  }
-
   const typeLabel = { sentence: '📖 Read aloud', question: '❓ Answer question', topic: '🎤 Speak freely' };
   const typeColor = { sentence: '#E8F0FE', question: '#FEF3E2', topic: '#F0E8FE' };
   const typeText = { sentence: '#1A56DB', question: '#E67E22', topic: '#7C3AED' };
   const currentlyDone = filterLevel !== 'all' && filterLesson !== 'all' && isCompleted(filterLevel, filterLesson);
-
-  const newFeedbacks = submissions.filter(s => s.status === 'reviewed' && !s.read_at);
 
   return (
     <div>
@@ -189,14 +200,14 @@ export default function Recording({ profile }) {
             {v === 'prompts' ? '📋 Prompts' : v === 'record' ? '🎙️ Record' : (
               <span style={{ position: 'relative' }}>
                 📬 My Submissions
-                {newFeedbacks.length > 0 && (
+                {newFeedbackCount > 0 && (
                   <span style={{
                     position: 'absolute', top: -8, right: -10,
                     background: 'var(--gold)', color: 'var(--dark)',
                     borderRadius: '50%', width: 16, height: 16,
                     fontSize: 10, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{newFeedbacks.length}</span>
+                  }}>{newFeedbackCount}</span>
                 )}
               </span>
             )}
@@ -348,15 +359,10 @@ export default function Recording({ profile }) {
 
       {view === 'submissions' && (
         <div>
-          {newFeedbacks.length > 0 && (
-            <div style={{ background: '#FFFBEA', border: '2px solid var(--gold)', borderRadius: 12, padding: '10px 14px', marginBottom: 16, fontSize: 14, fontWeight: 600, color: 'var(--dark)' }}>
-              🔔 You have {newFeedbacks.length} new feedback{newFeedbacks.length !== 1 ? 's' : ''} below!
-            </div>
-          )}
           {submissions.length === 0 ? (
             <div className="empty-state"><div className="empty-icon">🎙️</div><p>No recordings yet!</p></div>
           ) : submissions.map(s => (
-            <div key={s.id} className="submission-card" style={{ border: s.status === 'reviewed' && !s.read_at ? '2px solid var(--gold)' : '1px solid transparent' }}>
+            <div key={s.id} className="submission-card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
                 <div>
                   {s.prompt_title && <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 2, color: 'var(--dark)' }}>📋 {s.prompt_title}</div>}
@@ -375,13 +381,6 @@ export default function Recording({ profile }) {
               {s.feedback && (
                 <div className="feedback-bubble">
                   <strong>Teacher's feedback:</strong> {s.feedback}
-                  {!s.read_at && (
-                    <button onClick={() => markFeedbackRead(s.id)} style={{
-                      display: 'block', marginTop: 8, fontSize: 12, padding: '4px 12px',
-                      borderRadius: 8, border: 'none', background: 'var(--success)', color: 'white',
-                      cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-                    }}>✓ Got it</button>
-                  )}
                 </div>
               )}
             </div>

@@ -12,6 +12,7 @@ export default function StudentQuestions({ profile }) {
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState('');
   const [deleting, setDeleting] = useState(null);
+  const [newAnswerCount, setNewAnswerCount] = useState(0);
 
   const loadQuestions = useCallback(async () => {
     if (!profile) return;
@@ -21,9 +22,26 @@ export default function StudentQuestions({ profile }) {
       .eq('user_id', profile.id)
       .order('created_at', { ascending: false });
     setQuestions(data || []);
+    const unread = (data || []).filter(q => q.status === 'answered' && !q.read_at).length;
+    setNewAnswerCount(unread);
   }, [profile]);
 
   useEffect(() => { loadQuestions(); }, [loadQuestions]);
+
+  // Auto mark all answers as read when submissions tab is opened
+  useEffect(() => {
+    if (view === 'submissions' && profile) {
+      supabase.from('student_questions')
+        .update({ read_at: new Date().toISOString() })
+        .eq('user_id', profile.id)
+        .eq('status', 'answered')
+        .is('read_at', null)
+        .then(() => {
+          setNewAnswerCount(0);
+          loadQuestions();
+        });
+    }
+  }, [view, profile, loadQuestions]);
 
   async function sendQuestion() {
     if (!newQuestion.trim() || !profile) return;
@@ -49,13 +67,6 @@ export default function StudentQuestions({ profile }) {
     loadQuestions();
   }
 
-  async function markAnswerRead(id) {
-    await supabase.from('student_questions').update({ read_at: new Date().toISOString() }).eq('id', id);
-    loadQuestions();
-  }
-
-  const newAnswers = questions.filter(q => q.status === 'answered' && !q.read_at);
-
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Questions to Vi ❓</h1>
@@ -72,14 +83,14 @@ export default function StudentQuestions({ profile }) {
             {v === 'ask' ? '✏️ Ask a Question' : (
               <span style={{ position: 'relative' }}>
                 📬 My Submissions
-                {newAnswers.length > 0 && (
+                {newAnswerCount > 0 && (
                   <span style={{
                     position: 'absolute', top: -8, right: -10,
                     background: 'var(--gold)', color: 'var(--dark)',
                     borderRadius: '50%', width: 16, height: 16,
                     fontSize: 10, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>{newAnswers.length}</span>
+                  }}>{newAnswerCount}</span>
                 )}
               </span>
             )}
@@ -111,18 +122,13 @@ export default function StudentQuestions({ profile }) {
 
       {view === 'submissions' && (
         <div>
-          {newAnswers.length > 0 && (
-            <div style={{ background: '#FFFBEA', border: '2px solid var(--gold)', borderRadius: 12, padding: '10px 14px', marginBottom: 16, fontSize: 14, fontWeight: 600, color: 'var(--dark)' }}>
-              🔔 You have {newAnswers.length} new answer{newAnswers.length !== 1 ? 's' : ''} below!
-            </div>
-          )}
           {questions.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">❓</div>
               <p>No questions yet. Ask something!</p>
             </div>
           ) : questions.map(q => (
-            <div key={q.id} className="card" style={{ marginBottom: 12, border: q.status === 'answered' && !q.read_at ? '2px solid var(--gold)' : '1px solid transparent' }}>
+            <div key={q.id} className="card" style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{q.question}</div>
@@ -141,14 +147,7 @@ export default function StudentQuestions({ profile }) {
               {q.answer && (
                 <div style={{ background: '#E8F8EF', borderRadius: 10, padding: '10px 14px', borderLeft: '3px solid var(--success)' }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--success)', marginBottom: 4 }}>Vi's answer:</div>
-                  <div style={{ fontSize: 14, color: '#1A7A40', marginBottom: q.read_at ? 0 : 8 }}>{q.answer}</div>
-                  {!q.read_at && (
-                    <button onClick={() => markAnswerRead(q.id)} style={{
-                      fontSize: 12, padding: '4px 12px', borderRadius: 8, border: 'none',
-                      background: 'var(--success)', color: 'white', cursor: 'pointer',
-                      fontFamily: 'DM Sans, sans-serif', fontWeight: 600,
-                    }}>✓ Got it</button>
-                  )}
+                  <div style={{ fontSize: 14, color: '#1A7A40' }}>{q.answer}</div>
                 </div>
               )}
             </div>
