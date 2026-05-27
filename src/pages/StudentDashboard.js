@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 export default function StudentDashboard({ profile }) {
@@ -7,6 +7,7 @@ export default function StudentDashboard({ profile }) {
   const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
   const [unreadAnswers, setUnreadAnswers] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const loadStats = useCallback(async () => {
     const [q, r] = await Promise.all([
@@ -25,28 +26,12 @@ export default function StudentDashboard({ profile }) {
     setUnreadAnswers(a.count || 0);
   }, [profile]);
 
+  // Re-fetch every time this component mounts or location changes to '/'
   useEffect(() => {
     if (!profile) return;
     loadStats();
     loadUnread();
-  }, [profile, loadStats, loadUnread]);
-
-  // Re-check unread counts every time the page becomes visible
-  useEffect(() => {
-    function handleVisibility() {
-      if (document.visibilityState === 'visible') {
-        loadUnread();
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [loadUnread]);
-
-  // Also re-check when window gets focus (e.g. switching back to tab)
-  useEffect(() => {
-    window.addEventListener('focus', loadUnread);
-    return () => window.removeEventListener('focus', loadUnread);
-  }, [loadUnread]);
+  }, [profile, loadStats, loadUnread, location.key]);
 
   const totalPending = unreadFeedbacks + unreadAnswers;
 
