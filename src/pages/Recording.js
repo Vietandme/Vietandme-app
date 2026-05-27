@@ -56,20 +56,16 @@ export default function Recording({ profile }) {
     loadAllPrompts();
   }, [loadSubmissions, loadCompletions]);
 
-  // Auto mark all as read when submissions tab is opened
+  // Mark all as read when submissions tab opens
   useEffect(() => {
-    if (view === 'submissions' && profile) {
-      supabase.from('recordings')
-        .update({ read_at: new Date().toISOString() })
-        .eq('user_id', profile.id)
-        .eq('status', 'reviewed')
-        .is('read_at', null)
-        .then(() => {
-          setNewFeedbackCount(0);
-          loadSubmissions();
-        });
-    }
-  }, [view, profile, loadSubmissions]);
+    if (view !== 'submissions' || !profile) return;
+    supabase.from('recordings')
+      .update({ read_at: new Date().toISOString() })
+      .eq('user_id', profile.id)
+      .eq('status', 'reviewed')
+      .is('read_at', null)
+      .then(() => setNewFeedbackCount(0));
+  }, [view, profile]);
 
   async function loadAllPrompts() {
     const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
@@ -308,9 +304,9 @@ export default function Recording({ profile }) {
               <button onClick={markIncomplete} disabled={marking} style={{
                 width: '100%', padding: '14px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.2s',
                 fontFamily: 'DM Sans, sans-serif', fontSize: 15, fontWeight: 600,
-                border: '2px solid ' + (!currentlyDone ? 'var(--red)' : '#E8E8F0'),
-                background: !currentlyDone ? '#FFF0F0' : 'var(--white)',
-                color: !currentlyDone ? 'var(--red)' : 'var(--muted)',
+                border: '2px solid ' + (currentlyDone ? '#E8E8F0' : 'var(--red)'),
+                background: currentlyDone ? 'var(--white)' : '#FFF0F0',
+                color: currentlyDone ? 'var(--muted)' : 'var(--red)',
               }}>
                 ↩️ Mark as Incomplete — I want to do it again
               </button>
