@@ -118,8 +118,12 @@ export default function Recording({ profile }) {
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
-      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+      const mimeType = MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : '';
+      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       chunksRef.current = [];
       mr.ondataavailable = e => chunksRef.current.push(e.data);
       mr.onstop = () => {
@@ -146,7 +150,8 @@ export default function Recording({ profile }) {
     if (!audioBlob || !profile) return;
     setUploading(true);
     setMessage('');
-    const ext = mimeType === 'audio/mp4' ? 'm4a' : 'webm';
+    const mimeType = audioBlob ? audioBlob.type : 'audio/webm';
+    const ext = mimeType.includes('mp4') ? 'm4a' : 'webm';
     const fileName = `${profile.id}/${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage.from('recordings').upload(fileName, audioBlob);
     if (uploadError) { setMessage('Upload failed. Try again.'); setUploading(false); return; }
