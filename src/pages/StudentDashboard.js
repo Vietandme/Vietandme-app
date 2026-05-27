@@ -31,6 +31,23 @@ export default function StudentDashboard({ profile }) {
     loadUnread();
   }, [profile, loadStats, loadUnread]);
 
+  // Re-check unread counts every time the page becomes visible
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        loadUnread();
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [loadUnread]);
+
+  // Also re-check when window gets focus (e.g. switching back to tab)
+  useEffect(() => {
+    window.addEventListener('focus', loadUnread);
+    return () => window.removeEventListener('focus', loadUnread);
+  }, [loadUnread]);
+
   const totalPending = unreadFeedbacks + unreadAnswers;
 
   const levelClass = {
