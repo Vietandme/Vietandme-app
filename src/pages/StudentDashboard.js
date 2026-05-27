@@ -26,7 +26,6 @@ export default function StudentDashboard({ profile }) {
     setUnreadAnswers(a.count || 0);
   }, [profile]);
 
-  // Re-fetch every time this component mounts or location changes to '/'
   useEffect(() => {
     if (!profile) return;
     loadStats();
@@ -41,9 +40,31 @@ export default function StudentDashboard({ profile }) {
     advanced: 'level-advanced',
   }[profile?.level] || 'level-beginner';
 
+  async function handleViewFeedbacks() {
+    // Mark all as read immediately before navigating
+    await supabase.from('recordings')
+      .update({ read_at: new Date().toISOString() })
+      .eq('user_id', profile.id)
+      .eq('status', 'reviewed')
+      .is('read_at', null);
+    setUnreadFeedbacks(0);
+    navigate('/recording?tab=submissions');
+  }
+
+  async function handleViewAnswers() {
+    // Mark all as read immediately before navigating
+    await supabase.from('student_questions')
+      .update({ read_at: new Date().toISOString() })
+      .eq('user_id', profile.id)
+      .eq('status', 'answered')
+      .is('read_at', null);
+    setUnreadAnswers(0);
+    navigate('/questions?tab=submissions');
+  }
+
   function handlePendingClick() {
-    if (unreadFeedbacks > 0) navigate('/recording?tab=submissions');
-    else if (unreadAnswers > 0) navigate('/questions?tab=submissions');
+    if (unreadFeedbacks > 0) handleViewFeedbacks();
+    else if (unreadAnswers > 0) handleViewAnswers();
   }
 
   return (
@@ -94,10 +115,10 @@ export default function StudentDashboard({ profile }) {
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
             {unreadFeedbacks > 0 && (
-              <Link to="/recording?tab=submissions" className="btn btn-gold btn-sm">View Feedbacks</Link>
+              <button onClick={handleViewFeedbacks} className="btn btn-gold btn-sm">View Feedbacks</button>
             )}
             {unreadAnswers > 0 && (
-              <Link to="/questions?tab=submissions" className="btn btn-secondary btn-sm">View Answers</Link>
+              <button onClick={handleViewAnswers} className="btn btn-secondary btn-sm">View Answers</button>
             )}
           </div>
         </div>
