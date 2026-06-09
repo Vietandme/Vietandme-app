@@ -50,6 +50,18 @@ export default function Recording({ profile }) {
     setCompletions(data || []);
   }, []);
 
+  const loadWeeklyCount = useCallback(async () => {
+    if (!profile) return;
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const { count } = await supabase
+      .from('recordings')
+      .select('id', { count: 'exact' })
+      .eq('user_id', profile.id)
+      .gte('created_at', weekAgo.toISOString());
+    setWeeklyCount(count || 0);
+  }, [profile]);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id);
@@ -71,18 +83,6 @@ export default function Recording({ profile }) {
       .is('read_at', null)
       .then(() => setNewFeedbackCount(0));
   }, [view, profile]);
-
-  const loadWeeklyCount = useCallback(async () => {
-    if (!profile) return;
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const { count } = await supabase
-      .from('recordings')
-      .select('id', { count: 'exact' })
-      .eq('user_id', profile.id)
-      .gte('created_at', weekAgo.toISOString());
-    setWeeklyCount(count || 0);
-  }, [profile]);
 
   async function loadAllPrompts() {
     const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
