@@ -58,7 +58,7 @@ export default function Recording({ profile }) {
     loadSubmissions();
     loadAllPrompts();
     loadWeeklyCount();
-  }, [loadSubmissions, loadCompletions]);
+  }, [loadSubmissions, loadCompletions, loadWeeklyCount]);
 
   // Mark all as read when submissions tab opens
   useEffect(() => {
