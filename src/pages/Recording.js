@@ -29,6 +29,9 @@ export default function Recording({ profile }) {
   const [userId, setUserId] = useState(null);
   const [marking, setMarking] = useState(false);
   const [newFeedbackCount, setNewFeedbackCount] = useState(0);
+  const [weeklyCount, setWeeklyCount] = useState(0);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const timerRef = useRef(null);
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
   const navigate = useNavigate();
@@ -54,6 +57,7 @@ export default function Recording({ profile }) {
     });
     loadSubmissions();
     loadAllPrompts();
+    loadWeeklyCount();
   }, [loadSubmissions, loadCompletions]);
 
   // Mark all as read when submissions tab opens
@@ -66,6 +70,18 @@ export default function Recording({ profile }) {
       .is('read_at', null)
       .then(() => setNewFeedbackCount(0));
   }, [view, profile]);
+
+  async function loadWeeklyCount() {
+    if (!profile) return;
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const { count } = await supabase
+      .from('recordings')
+      .select('id', { count: 'exact' })
+      .eq('user_id', profile.id)
+      .gte('created_at', weekAgo.toISOString());
+    setWeeklyCount(count || 0);
+  }
 
   async function loadAllPrompts() {
     const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
@@ -138,13 +154,33 @@ export default function Recording({ profile }) {
       setStatus('recording');
       setAudioBlob(null);
       setAudioUrl(null);
+      setRecordingSeconds(0);
+      let secs = 0;
+      timerRef.current = setInterval(() => {
+        secs += 1;
+        setRecordingSeconds(secs);
+        if (secs >= 30) {
+          clearInterval(timerRef.current);
+          mr.stop();
+        }
+      }, 1000);
     } catch (err) {
       alert('Microphone access denied. Please allow microphone permission.');
     }
   }
 
-  function stopRecording() { if (mediaRef.current) mediaRef.current.stop(); }
-  function discardRecording() { setStatus('idle'); setAudioBlob(null); setAudioUrl(null); }
+  function stopRecording() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (mediaRef.current) mediaRef.current.stop();
+    setRecordingSeconds(0);
+  }
+  function discardRecording() {
+    if (timerRef.current) clearInterval(timerRef.current);
+    setStatus('idle');
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setRecordingSeconds(0);
+  }
 
   async function submitRecording() {
     if (!audioBlob || !profile) return;
@@ -171,6 +207,7 @@ export default function Recording({ profile }) {
     setNote('');
     setView('submissions');
     loadSubmissions();
+    loadWeeklyCount();
     setUploading(false);
   }
 
@@ -332,16 +369,39 @@ export default function Recording({ profile }) {
             </div>
           )}
           {message && <div className="alert alert-success">{message}</div>}
+
+          {weeklyCount >= 3 ? (
+            <div className="card" style={{ textAlign: 'center', padding: 32 }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🚫</div>
+              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: 'var(--red)' }}>Weekly limit reached</div>
+              <div style={{ fontSize: 14, color: 'var(--muted)' }}>You have sent 3 recordings this week. You can send more next week!</div>
+            </div>
+          ) : (
           <div className="card">
+            <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 13, color: 'var(--muted)' }}>
+              {weeklyCount}/3 recordings used this week
+            </div>
             <div className="recording-section">
               <button className={`record-btn ${status}`} onClick={status === 'idle' ? startRecording : status === 'recording' ? stopRecording : discardRecording}>
                 {status === 'idle' ? '🎙️' : status === 'recording' ? '⏹️' : '🗑️'}
               </button>
               <div className="recording-status">
                 {status === 'idle' && 'Tap to start recording'}
-                {status === 'recording' && '● Recording... tap to stop'}
+                {status === 'recording' && `● Recording... ${recordingSeconds}s / 30s`}
                 {status === 'done' && 'Recording done — tap 🗑️ to discard'}
               </div>
+              {status === 'recording' && (
+                <div style={{ width: '100%', marginBottom: 8 }}>
+                  <div style={{ background: '#E8E8F0', borderRadius: 20, height: 6, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 20, transition: 'width 1s linear',
+                      background: recordingSeconds >= 25 ? 'var(--error)' : 'var(--red)',
+                      width: `${(recordingSeconds / 30) * 100}%` }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: recordingSeconds >= 25 ? 'var(--error)' : 'var(--muted)', textAlign: 'right', marginTop: 2 }}>
+                    {30 - recordingSeconds}s remaining
+                  </div>
+                </div>
+              )}
               {audioUrl && <audio controls src={audioUrl} style={{ width: '100%', marginBottom: 16 }} />}
               {status === 'done' && (
                 <>
@@ -356,6 +416,7 @@ export default function Recording({ profile }) {
               )}
             </div>
           </div>
+          )}
           <button className="btn btn-secondary btn-sm" onClick={() => setView('prompts')} style={{ marginTop: 8 }}>← Back to Prompts</button>
         </div>
       )}
