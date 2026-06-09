@@ -18,7 +18,7 @@ export default function AdminUpload() {
     try {
       const data = await file.arrayBuffer();
       const wb = XLSX.read(data);
-      let counts = { flashcards: 0, quiz: 0 };
+      let counts = { flashcards: 0, quiz: 0, prompts: 0 };
 
       if (wb.SheetNames.includes('Flashcards')) {
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['Flashcards']);
@@ -48,9 +48,9 @@ export default function AdminUpload() {
           option_b: r['Option B'] || r['option_b'] || '',
           option_c: r['Option C'] || r['option_c'] || '',
           correct_answer: r['Correct Answer'] || r['correct_answer'] || '',
+          explanation: r['Explanation'] || r['explanation'] || '',
           category: r['Category'] || r['category'] || '',
           audio_url: r['Audio URL'] || r['audio_url'] || '',
-          explanation: r['Explanation'] || r['explanation'] || '',
           level: (r['Level'] || r['level'] || 'beginner').toLowerCase().trim(),
           lesson: String(r['Lesson'] || r['lesson'] || '').trim().padStart(2, '0').replace(/^0+$/, '') || '',
         })).filter(q => q.question && q.correct_answer);
@@ -59,6 +59,24 @@ export default function AdminUpload() {
           const { error } = await supabase.from('quiz_questions').insert(questions);
           if (!error) counts.quiz = questions.length;
           else setError('Quiz error: ' + error.message);
+        }
+      }
+
+      if (wb.SheetNames.includes('Prompts')) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Prompts']);
+        const prompts = rows.map(r => ({
+          title: r['Title'] || r['title'] || '',
+          instruction: r['Instruction'] || r['instruction'] || '',
+          type: (r['Type'] || r['type'] || 'sentence').toLowerCase().trim(),
+          level: (r['Level'] || r['level'] || 'all').toLowerCase().trim(),
+          lesson: String(r['Lesson'] || r['lesson'] || '').trim().padStart(2, '0').replace(/^0+$/, '') || '',
+          category: r['Category'] || r['category'] || '',
+        })).filter(p => p.title && p.instruction);
+
+        if (prompts.length > 0) {
+          const { error } = await supabase.from('recording_prompts').insert(prompts);
+          if (!error) counts.prompts = prompts.length;
+          else setError('Prompts error: ' + error.message);
         }
       }
 
@@ -73,12 +91,12 @@ export default function AdminUpload() {
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 8 }}>Upload Content 📤</h1>
-      <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>Upload an Excel file with your flashcards and quiz questions.</p>
+      <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>Upload an Excel file with your flashcards, quiz questions and prompts.</p>
 
       {error && <div className="alert alert-error">{error}</div>}
       {result && (
         <div className="alert alert-success">
-          ✓ Uploaded: <strong>{result.flashcards} flashcards</strong> and <strong>{result.quiz} quiz questions</strong>
+          ✓ Uploaded: <strong>{result.flashcards} flashcards</strong>, <strong>{result.quiz} quiz questions</strong>, <strong>{result.prompts} prompts</strong>
         </div>
       )}
 
@@ -100,26 +118,32 @@ export default function AdminUpload() {
           <div style={{ background: 'var(--cream)', borderRadius: 8, padding: 10, fontSize: 12, fontFamily: 'monospace', overflowX: 'auto' }}>
             Vietnamese | English | Pronunciation | Example | Level | Category | Lesson | Audio URL
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Level: beginner / pre-intermediate / intermediate / upper-intermediate / advanced</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Lesson: 1–15 · Audio URL: leave blank for now</div>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--dark)' }}>Sheet 2: "Quiz"</div>
+          <div style={{ background: 'var(--cream)', borderRadius: 8, padding: 10, fontSize: 12, fontFamily: 'monospace', overflowX: 'auto' }}>
+            Question | Option A | Option B | Option C | Correct Answer | Explanation | Level | Lesson | Category | Audio URL
+          </div>
         </div>
 
         <div>
-          <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--dark)' }}>Sheet 2: "Quiz"</div>
+          <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--dark)' }}>Sheet 3: "Prompts"</div>
           <div style={{ background: 'var(--cream)', borderRadius: 8, padding: 10, fontSize: 12, fontFamily: 'monospace', overflowX: 'auto' }}>
-            Question | Option A | Option B | Option C | Correct Answer | Explanation | Level | Lesson
+            Title | Instruction | Type | Level | Lesson | Category
           </div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Correct Answer must exactly match one of the options · Explanation is optional</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Type values: sentence / question / topic</div>
         </div>
       </div>
 
       <div className="card">
         <h3 className="card-title">💡 Tips</h3>
         <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
-          <p>• You can upload multiple times — new rows are always added on top</p>
-          <p>• Lesson numbers like 1, 2, 10 are all fine — no need for leading zeros</p>
-          <p>• Leave Audio URL blank — you can add it later via the Cards tab</p>
-          <p>• If upload shows 0 items, check your sheet tab names are exactly "Flashcards" and "Quiz"</p>
+          <p>• You can upload multiple times — new rows are always added</p>
+          <p>• Lesson numbers like 1, 2, 10 are all fine</p>
+          <p>• Leave Audio URL blank — add it later via the Cards tab</p>
+          <p>• Sheet names must be exactly "Flashcards", "Quiz", "Prompts"</p>
+          <p>• You don't need all 3 sheets — upload only what you have</p>
         </div>
       </div>
     </div>
