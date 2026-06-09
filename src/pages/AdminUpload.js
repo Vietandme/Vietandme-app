@@ -48,6 +48,8 @@ export default function AdminUpload() {
           option_b: r['Option B'] || r['option_b'] || '',
           option_c: r['Option C'] || r['option_c'] || '',
           correct_answer: r['Correct Answer'] || r['correct_answer'] || '',
+          category: r['Category'] || r['category'] || '',
+          audio_url: r['Audio URL'] || r['audio_url'] || '',
           explanation: r['Explanation'] || r['explanation'] || '',
           level: (r['Level'] || r['level'] || 'beginner').toLowerCase().trim(),
           lesson: String(r['Lesson'] || r['lesson'] || '').trim().padStart(2, '0').replace(/^0+$/, '') || '',
