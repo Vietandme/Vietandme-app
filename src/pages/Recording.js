@@ -71,7 +71,7 @@ export default function Recording({ profile }) {
       .then(() => setNewFeedbackCount(0));
   }, [view, profile]);
 
-  async function loadWeeklyCount() {
+  const loadWeeklyCount = useCallback(async () => {
     if (!profile) return;
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
@@ -81,7 +81,7 @@ export default function Recording({ profile }) {
       .eq('user_id', profile.id)
       .gte('created_at', weekAgo.toISOString());
     setWeeklyCount(count || 0);
-  }
+  }, [profile]);
 
   async function loadAllPrompts() {
     const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
