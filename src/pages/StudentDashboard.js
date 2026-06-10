@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
 const LEVELS = ['beginner', 'pre-intermediate', 'intermediate', 'upper-intermediate', 'advanced'];
 
 export default function StudentDashboard({ profile }) {
-  const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
-  const [unreadAnswers, setUnreadAnswers] = useState(0);
+  
+  
   const [flashcardProgress, setFlashcardProgress] = useState([]);
   const [quizProgress, setQuizProgress] = useState([]);
   const [recordingProgress, setRecordingProgress] = useState([]);
-  const navigate = useNavigate();
+  
   const location = useLocation();
 
   const loadUnread = useCallback(async () => {
