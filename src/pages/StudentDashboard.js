@@ -35,7 +35,9 @@ export default function StudentDashboard({ profile }) {
       (data || []).forEach(r => {
         if (!r.level || !r.lesson) return;
         if (!map[r.level]) map[r.level] = new Set();
-        map[r.level].add(r.lesson);
+        // Normalize lesson to always be zero-padded e.g. "1" -> "01"
+        const lesson = String(r.lesson).padStart(2, '0');
+        map[r.level].add(lesson);
       });
       return map;
     }
@@ -46,9 +48,10 @@ export default function StudentDashboard({ profile }) {
 
     const fcDone = {}, qDone = {}, recDone = {};
     (completions.data || []).forEach(c => {
-      if (c.type === 'flashcards') { if (!fcDone[c.level]) fcDone[c.level] = new Set(); fcDone[c.level].add(c.lesson); }
-      if (c.type === 'quiz') { if (!qDone[c.level]) qDone[c.level] = new Set(); qDone[c.level].add(c.lesson); }
-      if (c.type === 'recording') { if (!recDone[c.level]) recDone[c.level] = new Set(); recDone[c.level].add(c.lesson); }
+      const lesson = String(c.lesson || '').padStart(2, '0');
+      if (c.type === 'flashcards') { if (!fcDone[c.level]) fcDone[c.level] = new Set(); fcDone[c.level].add(lesson); }
+      if (c.type === 'quiz') { if (!qDone[c.level]) qDone[c.level] = new Set(); qDone[c.level].add(lesson); }
+      if (c.type === 'recording') { if (!recDone[c.level]) recDone[c.level] = new Set(); recDone[c.level].add(lesson); }
     });
 
     setFlashcardProgress(LEVELS.filter(l => fcAvail[l]?.size > 0).map(l => ({ level: l, completed: (fcDone[l] || new Set()).size, total: fcAvail[l].size })));
