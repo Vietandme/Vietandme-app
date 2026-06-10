@@ -65,19 +65,16 @@ export default function StudentDashboard({ profile }) {
     loadProgress();
   }, [profile, loadUnread, loadProgress, location.key]);
 
-  const totalPending = unreadFeedbacks + unreadAnswers;
 
   const levelClass = { beginner: 'level-beginner', intermediate: 'level-intermediate', advanced: 'level-advanced' }[profile?.level] || 'level-beginner';
 
   const shortLevel = l => ({ 'beginner': 'Beginner', 'pre-intermediate': 'Pre-Int', 'intermediate': 'Intermediate', 'upper-intermediate': 'Upper-Int', 'advanced': 'Advanced' }[l] || l);
 
-  async function handleViewFeedbacks() {
     await supabase.from('recordings').update({ read_at: new Date().toISOString() }).eq('user_id', profile.id).eq('status', 'reviewed').is('read_at', null);
     setUnreadFeedbacks(0);
     navigate('/recording?tab=submissions');
   }
 
-  async function handleViewAnswers() {
     await supabase.from('student_questions').update({ read_at: new Date().toISOString() }).eq('user_id', profile.id).eq('status', 'answered').is('read_at', null);
     setUnreadAnswers(0);
     navigate('/questions?tab=submissions');
