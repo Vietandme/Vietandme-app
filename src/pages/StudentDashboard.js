@@ -70,16 +70,6 @@ export default function StudentDashboard({ profile }) {
 
   const shortLevel = l => ({ 'beginner': 'Beginner', 'pre-intermediate': 'Pre-Int', 'intermediate': 'Intermediate', 'upper-intermediate': 'Upper-Int', 'advanced': 'Advanced' }[l] || l);
 
-    await supabase.from('recordings').update({ read_at: new Date().toISOString() }).eq('user_id', profile.id).eq('status', 'reviewed').is('read_at', null);
-    setUnreadFeedbacks(0);
-    navigate('/recording?tab=submissions');
-  }
-
-    await supabase.from('student_questions').update({ read_at: new Date().toISOString() }).eq('user_id', profile.id).eq('status', 'answered').is('read_at', null);
-    setUnreadAnswers(0);
-    navigate('/questions?tab=submissions');
-  }
-
   function ProgressSection({ title, data }) {
     if (data.length === 0) return null;
     return (
