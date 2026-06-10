@@ -114,22 +114,7 @@ export default function StudentDashboard({ profile }) {
         </p>
       </div>
 
-      {totalPending > 0 && (
-        <div className="card" style={{ background: 'var(--dark)', color: 'var(--white)', marginBottom: 16 }}>
-          <div style={{ fontSize: 24, textAlign: 'center', marginBottom: 8 }}>🔔</div>
-          <h3 style={{ color: 'var(--gold)', textAlign: 'center', marginBottom: 8 }}>
-            {totalPending} new item{totalPending !== 1 ? 's' : ''} waiting!
-          </h3>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-            {unreadFeedbacks > 0 && <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>🎙️ {unreadFeedbacks} new feedback{unreadFeedbacks !== 1 ? 's' : ''}</div>}
-            {unreadAnswers > 0 && <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>💬 {unreadAnswers} new answer{unreadAnswers !== 1 ? 's' : ''}</div>}
-          </div>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-            {unreadFeedbacks > 0 && <button onClick={handleViewFeedbacks} className="btn btn-gold btn-sm">View Feedbacks</button>}
-            {unreadAnswers > 0 && <button onClick={handleViewAnswers} className="btn btn-secondary btn-sm">View Answers</button>}
-          </div>
-        </div>
-      )}
+
 
       <h2 style={{ fontSize: 18, marginBottom: 12 }}>What do you want to practice?</h2>
       <div className="menu-grid">
