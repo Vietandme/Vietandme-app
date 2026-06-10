@@ -13,13 +13,10 @@ export default function StudentDashboard({ profile }) {
   
   const location = useLocation();
 
-  const loadUnread = useCallback(async () => {
     const [f, a] = await Promise.all([
       supabase.from('recordings').select('id', { count: 'exact' }).eq('user_id', profile.id).eq('status', 'reviewed').is('read_at', null),
       supabase.from('student_questions').select('id', { count: 'exact' }).eq('user_id', profile.id).eq('status', 'answered').is('read_at', null),
     ]);
-    setUnreadFeedbacks(f.count || 0);
-    setUnreadAnswers(a.count || 0);
   }, [profile]);
 
   const loadProgress = useCallback(async () => {
@@ -61,9 +58,7 @@ export default function StudentDashboard({ profile }) {
 
   useEffect(() => {
     if (!profile) return;
-    loadUnread();
     loadProgress();
-  }, [profile, loadUnread, loadProgress, location.key]);
 
 
   const levelClass = { beginner: 'level-beginner', intermediate: 'level-intermediate', advanced: 'level-advanced' }[profile?.level] || 'level-beginner';
