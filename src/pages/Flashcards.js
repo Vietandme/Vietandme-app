@@ -36,7 +36,8 @@ export default function Flashcards() {
 
   async function loadCategories() {
     const { data } = await supabase.from('flashcards').select('category').not('category', 'is', null).neq('category', '');
-    const unique = ['all', ...new Set((data || []).map(d => d.category).filter(Boolean).sort())];
+    const all = (data || []).flatMap(d => (d.category || '').split(',').map(c => c.trim())).filter(Boolean);
+    const unique = ['all', ...new Set(all.sort())];
     setCategories(unique);
   }
 
@@ -45,9 +46,9 @@ export default function Flashcards() {
     let query = supabase.from('flashcards').select('*');
     if (level !== 'all') query = query.eq('level', level);
     if (lesson !== 'all') query = query.eq('lesson', lesson);
-    if (category !== 'all') query = query.eq('category', category);
     const { data } = await query;
-    setCards(data ? shuffle(data) : []);
+    const filtered = category === 'all' ? data : (data || []).filter(c => (c.category || '').split(',').map(s => s.trim()).includes(category));
+    setCards(filtered ? shuffle(filtered) : []);
     setIndex(0);
     setFlipped(false);
     setLoading(false);

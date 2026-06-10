@@ -87,7 +87,8 @@ export default function Recording({ profile }) {
   async function loadAllPrompts() {
     const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
     setAllPrompts(data || []);
-    const cats = ['all', ...new Set((data || []).map(p => p.category).filter(Boolean).sort())];
+    const allCats = (data || []).flatMap(p => (p.category || '').split(',').map(c => c.trim())).filter(Boolean);
+    const cats = ['all', ...new Set(allCats.sort())];
     setCategories(cats);
   }
 
@@ -95,7 +96,7 @@ export default function Recording({ profile }) {
     let filtered = allPrompts;
     if (filterLevel !== 'all') filtered = filtered.filter(p => p.level === filterLevel || p.level === 'all');
     if (filterLesson !== 'all') filtered = filtered.filter(p => p.lesson === filterLesson);
-    if (filterCategory !== 'all') filtered = filtered.filter(p => p.category === filterCategory);
+    if (filterCategory !== 'all') filtered = filtered.filter(p => (p.category || '').split(',').map(s => s.trim()).includes(filterCategory));
     setPrompts(filtered);
   }, [allPrompts, filterLevel, filterLesson, filterCategory]);
 

@@ -37,7 +37,8 @@ export default function Quiz() {
 
   async function loadCategories() {
     const { data } = await supabase.from('quiz_questions').select('category').not('category', 'is', null).neq('category', '');
-    const unique = ['all', ...new Set((data || []).map(d => d.category).filter(Boolean).sort())];
+    const all = (data || []).flatMap(d => (d.category || '').split(',').map(c => c.trim())).filter(Boolean);
+    const unique = ['all', ...new Set(all.sort())];
     setCategories(unique);
   }
 
@@ -46,9 +47,9 @@ export default function Quiz() {
     let query = supabase.from('quiz_questions').select('*');
     if (level !== 'all') query = query.eq('level', level);
     if (lesson !== 'all') query = query.eq('lesson', lesson);
-    if (category !== 'all') query = query.eq('category', category);
     const { data } = await query;
-    const shuffled = (data || []).sort(() => Math.random() - 0.5).slice(0, 10);
+    const filtered = category === 'all' ? (data || []) : (data || []).filter(q => (q.category || '').split(',').map(s => s.trim()).includes(category));
+    const shuffled = filtered.sort(() => Math.random() - 0.5).slice(0, 10);
     setQuestions(shuffled);
     setIndex(0); setSelected(null); setScore(0); setDone(false);
     setLoading(false);
