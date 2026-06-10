@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
@@ -6,10 +6,22 @@ export default function Layout({ profile }) {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdmin = profile?.role === 'admin';
+  const [totalPending, setTotalPending] = useState(0);
+
+  const loadPending = useCallback(async () => {
+    if (!profile || isAdmin) return;
+    const [f, a] = await Promise.all([
+      supabase.from('recordings').select('id', { count: 'exact' }).eq('user_id', profile.id).eq('status', 'reviewed').is('read_at', null),
+      supabase.from('student_questions').select('id', { count: 'exact' }).eq('user_id', profile.id).eq('status', 'answered').is('read_at', null),
+    ]);
+    setTotalPending((f.count || 0) + (a.count || 0));
+  }, [profile, isAdmin]);
+
+  useEffect(() => { loadPending(); }, [loadPending, location.key]);
 
   const studentNav = [
     { path: '/', icon: '🏠', label: 'Home' },
-    { path: '/flashcards', icon: '📇', label: 'Flashcards' },
+    { path: '/flashcards', icon: '🗂️', label: 'Flashcards' },
     { path: '/quiz', icon: '✏️', label: 'Quiz' },
     { path: '/recording', icon: '🎙️', label: 'Record' },
     { path: '/questions', icon: '❓', label: 'Questions' },
@@ -20,7 +32,7 @@ export default function Layout({ profile }) {
     { path: '/admin/feedback', icon: '🎙️', label: 'Feedback' },
     { path: '/admin/questions', icon: '❓', label: 'Questions' },
     { path: '/admin/prompts', icon: '📋', label: 'Prompts' },
-    { path: '/admin/content', icon: '📇', label: 'Cards' },
+    { path: '/admin/content', icon: '🗂️', label: 'Cards' },
     { path: '/admin/quiz', icon: '✏️', label: 'Quiz' },
     { path: '/admin/upload', icon: '📤', label: 'Upload' },
     { path: '/admin/students', icon: '👥', label: 'Students' },
@@ -34,6 +46,18 @@ export default function Layout({ profile }) {
       <div className="top-bar">
         <span className="top-bar-title">🇻🇳 Viet & Me</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {!isAdmin && totalPending > 0 && (
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => navigate('/')}>
+              <span style={{ fontSize: 22 }}>🔔</span>
+              <span style={{
+                position: 'absolute', top: -4, right: -6,
+                background: 'var(--gold)', color: 'var(--dark)',
+                borderRadius: '50%', width: 16, height: 16,
+                fontSize: 10, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>{totalPending}</span>
+            </div>
+          )}
           <span className="top-bar-user">{profile?.full_name || profile?.email}</span>
           <button className="btn btn-sm btn-secondary" onClick={handleLogout} style={{ padding: '4px 12px', fontSize: 12 }}>Out</button>
         </div>

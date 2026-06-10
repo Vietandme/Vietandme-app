@@ -2,20 +2,16 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
+const LEVELS = ['beginner', 'pre-intermediate', 'intermediate', 'upper-intermediate', 'advanced'];
+
 export default function StudentDashboard({ profile }) {
-  const [stats, setStats] = useState({ quizzes: 0, recordings: 0 });
   const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
   const [unreadAnswers, setUnreadAnswers] = useState(0);
+  const [flashcardProgress, setFlashcardProgress] = useState([]);
+  const [quizProgress, setQuizProgress] = useState([]);
+  const [recordingProgress, setRecordingProgress] = useState([]);
   const navigate = useNavigate();
   const location = useLocation();
-
-  const loadStats = useCallback(async () => {
-    const [q, r] = await Promise.all([
-      supabase.from('quiz_results').select('id', { count: 'exact' }).eq('user_id', profile.id),
-      supabase.from('recordings').select('id', { count: 'exact' }).eq('user_id', profile.id),
-    ]);
-    setStats({ quizzes: q.count || 0, recordings: r.count || 0 });
-  }, [profile]);
 
   const loadUnread = useCallback(async () => {
     const [f, a] = await Promise.all([
@@ -26,45 +22,84 @@ export default function StudentDashboard({ profile }) {
     setUnreadAnswers(a.count || 0);
   }, [profile]);
 
+  const loadProgress = useCallback(async () => {
+    const [completions, fcLessons, qLessons, recLessons] = await Promise.all([
+      supabase.from('lesson_completions').select('*').eq('user_id', profile.id),
+      supabase.from('flashcards').select('level, lesson').not('lesson', 'is', null).neq('lesson', ''),
+      supabase.from('quiz_questions').select('level, lesson').not('lesson', 'is', null).neq('lesson', ''),
+      supabase.from('recording_prompts').select('level, lesson').not('lesson', 'is', null).neq('lesson', ''),
+    ]);
+
+    function uniqueLessonsPerLevel(data) {
+      const map = {};
+      (data || []).forEach(r => {
+        if (!r.level || !r.lesson) return;
+        if (!map[r.level]) map[r.level] = new Set();
+        map[r.level].add(r.lesson);
+      });
+      return map;
+    }
+
+    const fcAvail = uniqueLessonsPerLevel(fcLessons.data);
+    const qAvail = uniqueLessonsPerLevel(qLessons.data);
+    const recAvail = uniqueLessonsPerLevel(recLessons.data);
+
+    const fcDone = {}, qDone = {}, recDone = {};
+    (completions.data || []).forEach(c => {
+      if (c.type === 'flashcards') { if (!fcDone[c.level]) fcDone[c.level] = new Set(); fcDone[c.level].add(c.lesson); }
+      if (c.type === 'quiz') { if (!qDone[c.level]) qDone[c.level] = new Set(); qDone[c.level].add(c.lesson); }
+      if (c.type === 'recording') { if (!recDone[c.level]) recDone[c.level] = new Set(); recDone[c.level].add(c.lesson); }
+    });
+
+    setFlashcardProgress(LEVELS.filter(l => fcAvail[l]?.size > 0).map(l => ({ level: l, completed: (fcDone[l] || new Set()).size, total: fcAvail[l].size })));
+    setQuizProgress(LEVELS.filter(l => qAvail[l]?.size > 0).map(l => ({ level: l, completed: (qDone[l] || new Set()).size, total: qAvail[l].size })));
+    setRecordingProgress(LEVELS.filter(l => recAvail[l]?.size > 0).map(l => ({ level: l, completed: (recDone[l] || new Set()).size, total: recAvail[l].size })));
+  }, [profile]);
+
   useEffect(() => {
     if (!profile) return;
-    loadStats();
     loadUnread();
-  }, [profile, loadStats, loadUnread, location.key]);
+    loadProgress();
+  }, [profile, loadUnread, loadProgress, location.key]);
 
   const totalPending = unreadFeedbacks + unreadAnswers;
 
-  const levelClass = {
-    beginner: 'level-beginner',
-    intermediate: 'level-intermediate',
-    advanced: 'level-advanced',
-  }[profile?.level] || 'level-beginner';
+  const levelClass = { beginner: 'level-beginner', intermediate: 'level-intermediate', advanced: 'level-advanced' }[profile?.level] || 'level-beginner';
+
+  const shortLevel = l => ({ 'beginner': 'Beginner', 'pre-intermediate': 'Pre-Int', 'intermediate': 'Intermediate', 'upper-intermediate': 'Upper-Int', 'advanced': 'Advanced' }[l] || l);
 
   async function handleViewFeedbacks() {
-    // Mark all as read immediately before navigating
-    await supabase.from('recordings')
-      .update({ read_at: new Date().toISOString() })
-      .eq('user_id', profile.id)
-      .eq('status', 'reviewed')
-      .is('read_at', null);
+    await supabase.from('recordings').update({ read_at: new Date().toISOString() }).eq('user_id', profile.id).eq('status', 'reviewed').is('read_at', null);
     setUnreadFeedbacks(0);
     navigate('/recording?tab=submissions');
   }
 
   async function handleViewAnswers() {
-    // Mark all as read immediately before navigating
-    await supabase.from('student_questions')
-      .update({ read_at: new Date().toISOString() })
-      .eq('user_id', profile.id)
-      .eq('status', 'answered')
-      .is('read_at', null);
+    await supabase.from('student_questions').update({ read_at: new Date().toISOString() }).eq('user_id', profile.id).eq('status', 'answered').is('read_at', null);
     setUnreadAnswers(0);
     navigate('/questions?tab=submissions');
   }
 
-  function handlePendingClick() {
-    if (unreadFeedbacks > 0) handleViewFeedbacks();
-    else if (unreadAnswers > 0) handleViewAnswers();
+  function ProgressSection({ title, data }) {
+    if (data.length === 0) return null;
+    return (
+      <div className="card" style={{ marginBottom: 12 }}>
+        <h3 className="card-title" style={{ marginBottom: 12 }}>{title}</h3>
+        {data.map(p => (
+          <div key={p.level} style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+              <span style={{ fontWeight: 600 }}>{shortLevel(p.level)}</span>
+              <span style={{ color: p.completed === p.total ? 'var(--success)' : 'var(--muted)' }}>
+                {p.completed}/{p.total} lessons {p.completed === p.total ? '🏆' : ''}
+              </span>
+            </div>
+            <div className="progress-bar-wrap">
+              <div className="progress-bar-fill" style={{ width: `${p.total > 0 ? (p.completed / p.total) * 100 : 0}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (
@@ -76,25 +111,6 @@ export default function StudentDashboard({ profile }) {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 24 }}>
-        <div className="card admin-stat" style={{ margin: 0 }}>
-          <div className="num">{stats.quizzes}</div>
-          <div className="label">Quizzes</div>
-        </div>
-        <div
-          className="card admin-stat"
-          style={{ margin: 0, cursor: totalPending > 0 ? 'pointer' : 'default' }}
-          onClick={totalPending > 0 ? handlePendingClick : undefined}
-        >
-          <div className="num" style={{ color: totalPending > 0 ? 'var(--gold)' : 'var(--red)' }}>{totalPending}</div>
-          <div className="label">Pending</div>
-        </div>
-        <div className="card admin-stat" style={{ margin: 0 }}>
-          <div className="num">{stats.recordings}</div>
-          <div className="label">Recordings</div>
-        </div>
-      </div>
-
       {totalPending > 0 && (
         <div className="card" style={{ background: 'var(--dark)', color: 'var(--white)', marginBottom: 16 }}>
           <div style={{ fontSize: 24, textAlign: 'center', marginBottom: 8 }}>🔔</div>
@@ -102,24 +118,12 @@ export default function StudentDashboard({ profile }) {
             {totalPending} new item{totalPending !== 1 ? 's' : ''} waiting!
           </h3>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-            {unreadFeedbacks > 0 && (
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
-                🎙️ {unreadFeedbacks} new feedback{unreadFeedbacks !== 1 ? 's' : ''}
-              </div>
-            )}
-            {unreadAnswers > 0 && (
-              <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
-                💬 {unreadAnswers} new answer{unreadAnswers !== 1 ? 's' : ''}
-              </div>
-            )}
+            {unreadFeedbacks > 0 && <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>🎙️ {unreadFeedbacks} new feedback{unreadFeedbacks !== 1 ? 's' : ''}</div>}
+            {unreadAnswers > 0 && <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>💬 {unreadAnswers} new answer{unreadAnswers !== 1 ? 's' : ''}</div>}
           </div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-            {unreadFeedbacks > 0 && (
-              <button onClick={handleViewFeedbacks} className="btn btn-gold btn-sm">View Feedbacks</button>
-            )}
-            {unreadAnswers > 0 && (
-              <button onClick={handleViewAnswers} className="btn btn-secondary btn-sm">View Answers</button>
-            )}
+            {unreadFeedbacks > 0 && <button onClick={handleViewFeedbacks} className="btn btn-gold btn-sm">View Feedbacks</button>}
+            {unreadAnswers > 0 && <button onClick={handleViewAnswers} className="btn btn-secondary btn-sm">View Answers</button>}
           </div>
         </div>
       )}
@@ -127,7 +131,7 @@ export default function StudentDashboard({ profile }) {
       <h2 style={{ fontSize: 18, marginBottom: 12 }}>What do you want to practice?</h2>
       <div className="menu-grid">
         <Link to="/flashcards" className="menu-card">
-          <span className="icon">📇</span>
+          <span className="icon">🗂️</span>
           <span className="label">Flashcards</span>
           <span className="sub">Vocab & phrases</span>
         </Link>
@@ -144,9 +148,13 @@ export default function StudentDashboard({ profile }) {
         <Link to="/questions" className="menu-card">
           <span className="icon">❓</span>
           <span className="label">Questions</span>
-          <span className="sub">Ask Vi anything</span>
+          <span className="sub">Ask V anything</span>
         </Link>
       </div>
+
+      <ProgressSection title="🗂️ Flashcard progress" data={flashcardProgress} />
+      <ProgressSection title="✏️ Quiz progress" data={quizProgress} />
+      <ProgressSection title="🎙️ Recording progress" data={recordingProgress} />
     </div>
   );
 }
