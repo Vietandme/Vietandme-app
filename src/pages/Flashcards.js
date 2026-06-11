@@ -47,7 +47,7 @@ export default function Flashcards() {
     if (level !== 'all') query = query.eq('level', level);
     if (lesson !== 'all') query = query.eq('lesson', lesson);
     const { data } = await query;
-    const filtered = category === 'all' ? data : (data || []).filter(c => (c.category || '').split(',').map(s => s.trim()).includes(category));
+    const filtered = category === 'all' ? data : (data || []).filter(c => (c.category || '').split(',').map(s => s.trim().toLowerCase()).includes(category.toLowerCase()));
     setCards(filtered ? shuffle(filtered) : []);
     setIndex(0);
     setFlipped(false);

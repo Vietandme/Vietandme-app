@@ -48,7 +48,7 @@ export default function Quiz() {
     if (level !== 'all') query = query.eq('level', level);
     if (lesson !== 'all') query = query.eq('lesson', lesson);
     const { data } = await query;
-    const filtered = category === 'all' ? (data || []) : (data || []).filter(q => (q.category || '').split(',').map(s => s.trim()).includes(category));
+    const filtered = category === 'all' ? (data || []) : (data || []).filter(q => (q.category || '').split(',').map(s => s.trim().toLowerCase()).includes(category.toLowerCase()));
     const shuffled = filtered.sort(() => Math.random() - 0.5).slice(0, 10);
     setQuestions(shuffled);
     setIndex(0); setSelected(null); setScore(0); setDone(false);
