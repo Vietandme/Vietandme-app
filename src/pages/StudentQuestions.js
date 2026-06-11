@@ -10,9 +10,22 @@ export default function StudentQuestions({ profile }) {
   const [questions, setQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState('');
   const [sending, setSending] = useState(false);
+  const [dailyCount, setDailyCount] = useState(0);
   const [message, setMessage] = useState('');
   const [deleting, setDeleting] = useState(null);
   const [newAnswerCount, setNewAnswerCount] = useState(0);
+
+  const loadDailyCount = useCallback(async () => {
+    if (!profile) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { count } = await supabase
+      .from('student_questions')
+      .select('id', { count: 'exact' })
+      .eq('user_id', profile.id)
+      .gte('created_at', today.toISOString());
+    setDailyCount(count || 0);
+  }, [profile]);
 
   const loadQuestions = useCallback(async () => {
     if (!profile) return;
@@ -26,7 +39,7 @@ export default function StudentQuestions({ profile }) {
     setNewAnswerCount(unread);
   }, [profile]);
 
-  useEffect(() => { loadQuestions(); }, [loadQuestions]);
+  useEffect(() => { loadQuestions(); loadDailyCount(); }, [loadQuestions, loadDailyCount]);
 
   // Auto mark all answers as read when submissions tab is opened
   useEffect(() => {
@@ -55,6 +68,7 @@ export default function StudentQuestions({ profile }) {
     setMessage('Question sent! Vi will answer soon.');
     setTimeout(() => setMessage(''), 3000);
     loadQuestions();
+    loadDailyCount();
     setSending(false);
     setView('submissions');
   }
@@ -113,7 +127,10 @@ export default function StudentQuestions({ profile }) {
                 style={{ resize: 'none' }}
               />
             </div>
-            <button className="btn btn-primary btn-full" onClick={sendQuestion} disabled={sending || !newQuestion.trim()}>
+            {dailyCount >= 2 && (
+              <div className="alert alert-error" style={{marginBottom: 8}}>You have reached the daily limit of 2 questions.</div>
+            )}
+            <button className="btn btn-primary btn-full" onClick={sendQuestion} disabled={sending || !newQuestion.trim() || dailyCount >= 2}>
               {sending ? 'Sending...' : '📤 Send Question'}
             </button>
           </div>

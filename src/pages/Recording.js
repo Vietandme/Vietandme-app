@@ -50,18 +50,6 @@ export default function Recording({ profile }) {
     setCompletions(data || []);
   }, []);
 
-  const loadWeeklyCount = useCallback(async () => {
-    if (!profile) return;
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const { count } = await supabase
-      .from('recordings')
-      .select('id', { count: 'exact' })
-      .eq('user_id', profile.id)
-      .gte('created_at', weekAgo.toISOString());
-    setWeeklyCount(count || 0);
-  }, [profile]);
-
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id);
@@ -69,10 +57,9 @@ export default function Recording({ profile }) {
     });
     loadSubmissions();
     loadAllPrompts();
-  }, [loadSubmissions, loadCompletions]);
+    loadWeeklyCount();
+  }, [loadSubmissions, loadCompletions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-
-  useEffect(() => { loadWeeklyCount(); }, [loadWeeklyCount]);
   // Mark all as read when submissions tab opens
   useEffect(() => {
     if (view !== 'submissions' || !profile) return;
@@ -84,11 +71,22 @@ export default function Recording({ profile }) {
       .then(() => setNewFeedbackCount(0));
   }, [view, profile]);
 
+  async function loadWeeklyCount() {
+    if (!profile) return;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { count } = await supabase
+      .from('recordings')
+      .select('id', { count: 'exact' })
+      .eq('user_id', profile.id)
+      .gte('created_at', today.toISOString());
+    setWeeklyCount(count || 0);
+  }
+
   async function loadAllPrompts() {
     const { data } = await supabase.from('recording_prompts').select('*').order('created_at', { ascending: false });
     setAllPrompts(data || []);
-    const allCats = (data || []).flatMap(p => (p.category || '').split(',').map(c => c.trim().toLowerCase()).filter(Boolean));
-    const cats = ['all', ...new Set(allCats.sort())];
+    const cats = ['all', ...new Set((data || []).map(p => p.category).filter(Boolean).sort())];
     setCategories(cats);
   }
 
@@ -96,7 +94,7 @@ export default function Recording({ profile }) {
     let filtered = allPrompts;
     if (filterLevel !== 'all') filtered = filtered.filter(p => p.level === filterLevel || p.level === 'all');
     if (filterLesson !== 'all') filtered = filtered.filter(p => p.lesson === filterLesson);
-    if (filterCategory !== 'all') filtered = filtered.filter(p => (p.category || '').split(',').map(s => s.trim().toLowerCase()).includes(filterCategory.toLowerCase()));
+    if (filterCategory !== 'all') filtered = filtered.filter(p => p.category === filterCategory);
     setPrompts(filtered);
   }, [allPrompts, filterLevel, filterLesson, filterCategory]);
 
@@ -372,16 +370,16 @@ export default function Recording({ profile }) {
           )}
           {message && <div className="alert alert-success">{message}</div>}
 
-          {weeklyCount >= 3 ? (
+          {weeklyCount >= 5 ? (
             <div className="card" style={{ textAlign: 'center', padding: 32 }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🚫</div>
-              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: 'var(--red)' }}>Weekly limit reached</div>
-              <div style={{ fontSize: 14, color: 'var(--muted)' }}>You have sent 3 recordings this week. You can send more next week!</div>
+              <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8, color: 'var(--red)' }}>Daily limit reached</div>
+              <div style={{ fontSize: 14, color: 'var(--muted)' }}>You have sent 5 recordings today. Come back tomorrow!!</div>
             </div>
           ) : (
           <div className="card">
             <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 13, color: 'var(--muted)' }}>
-              {weeklyCount}/3 recordings used this week
+              {weeklyCount}/5 recordings used today
             </div>
             <div className="recording-section">
               <button className={`record-btn ${status}`} onClick={status === 'idle' ? startRecording : status === 'recording' ? stopRecording : discardRecording}>
